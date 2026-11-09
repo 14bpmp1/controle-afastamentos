@@ -71,6 +71,24 @@ async function entrar(){
 }
 async function sair(){try{if(db)await db.auth.signOut();}catch(e){console.error(e);}finally{exibirLogin();setMsg('loginMessage','Sessão encerrada.');}}
 async function carregarDados(){
+  
+const { data: averbacoes, error: erroAverbacoes } =
+  await db
+    .from("vw_averbacoes")
+    .select("*");
+
+if (erroAverbacoes) {
+  console.error(
+    "Erro ao consultar averbações:",
+    erroAverbacoes
+  );
+} else {
+  console.log(
+    "Averbações carregadas:",
+    averbacoes
+  );
+}
+
   $('recordsInfo').textContent='Carregando registros...';
   try{
     const [p,t,a]=await Promise.all([
