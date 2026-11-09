@@ -72,7 +72,19 @@ async function entrar(){
 async function sair(){try{if(db)await db.auth.signOut();}catch(e){console.error(e);}finally{exibirLogin();setMsg('loginMessage','Sessão encerrada.');}}
 async function carregarDados(){
   
-const { data: averbacoes, error: erroAverbacoes } =
+  $('recordsInfo').textContent='Carregando registros...';
+  try{
+    const [p,t,a]=await Promise.all([
+      db.from('policiais').select('id,matricula,posto_graduacao,qra,nome_completo').eq('ativo',true).order('nome_completo'),
+      db.from('tipos_afastamento').select('id,sigla,descricao,dias_fixos').eq('ativo',true).order('sigla'),
+      db.from('afastamentos').select('id,policial_id,tipo_id,data_inicio,data_fim,dias,cancelado_em,policiais(matricula,qra,nome_completo),tipos_afastamento(sigla)').order('data_inicio',{ascending:false}).limit(1000)
+    ]);
+    if(p.error||t.error||a.error)throw p.error||t.error||a.error;
+    policiais=p.data||[];tipos=t.data||[];registros=a.data||[];
+    preencherSeletores();atualizarPainel();mostrarRegistros();
+  }catch(error){console.error('Erro ao carregar dados:',error);$('recordsInfo').textContent='Erro ao consultar registros: '+erroAmigavel(error);}
+}
+  const { data: averbacoes, error: erroAverbacoes } =
   await db
     .from("vw_averbacoes")
     .select("*");
@@ -89,18 +101,6 @@ if (erroAverbacoes) {
   );
 }
 
-  $('recordsInfo').textContent='Carregando registros...';
-  try{
-    const [p,t,a]=await Promise.all([
-      db.from('policiais').select('id,matricula,posto_graduacao,qra,nome_completo').eq('ativo',true).order('nome_completo'),
-      db.from('tipos_afastamento').select('id,sigla,descricao,dias_fixos').eq('ativo',true).order('sigla'),
-      db.from('afastamentos').select('id,policial_id,tipo_id,data_inicio,data_fim,dias,cancelado_em,policiais(matricula,qra,nome_completo),tipos_afastamento(sigla)').order('data_inicio',{ascending:false}).limit(1000)
-    ]);
-    if(p.error||t.error||a.error)throw p.error||t.error||a.error;
-    policiais=p.data||[];tipos=t.data||[];registros=a.data||[];
-    preencherSeletores();atualizarPainel();mostrarRegistros();
-  }catch(error){console.error('Erro ao carregar dados:',error);$('recordsInfo').textContent='Erro ao consultar registros: '+erroAmigavel(error);}
-}
 function preencherSeletores(){
   const p=$('policial'),t=$('tipo');p.replaceChildren(opcao('','Selecione o policial'));t.replaceChildren(opcao('','Selecione o tipo'));
   policiais.forEach(x=>p.appendChild(opcao(x.id,`${x.matricula} · ${x.qra} · ${x.nome_completo}`)));
