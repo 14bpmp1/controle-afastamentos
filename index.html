@@ -1,806 +1,139 @@
-
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Controle de Afastamentos | 14º BPM</title>
-
 <style>
-:root {
-  --bg:#f3f6fb;
-  --card:#fff;
-  --text:#19283d;
-  --muted:#64748b;
-  --border:#dce4ef;
-  --blue:#1d4ed8;
-  --green:#15803d;
-  --red:#b91c1c;
-}
-* { box-sizing:border-box; }
-[hidden] { display:none!important; }
-body {
-  margin:0;
-  font-family:system-ui,Arial,sans-serif;
-  background:var(--bg);
-  color:var(--text);
-}
-button,input,select,textarea { font:inherit; }
-button { cursor:pointer; }
-header {
-  background:#132b50;
-  color:white;
-  padding:15px 20px;
-}
-.header-inner {
-  max-width:1150px;
-  margin:auto;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:12px;
-}
-header h1 { font-size:19px;margin:0; }
-header p { font-size:12px;opacity:.8;margin:4px 0 0; }
-main { max-width:1150px;margin:22px auto;padding:0 14px; }
-.panel {
-  background:var(--card);
-  border:1px solid var(--border);
-  border-radius:14px;
-  padding:20px;
-  margin-bottom:17px;
-}
-.login {
-  max-width:420px;
-  margin:65px auto;
-}
-h2 { margin:0 0 15px;font-size:19px; }
-h3 { margin:0 0 12px;font-size:16px; }
-label {
-  display:block;
-  margin:12px 0 5px;
-  font-size:13px;
-  font-weight:650;
-}
-input,select,textarea {
-  width:100%;
-  min-height:42px;
-  padding:10px;
-  background:white;
-  border:1px solid var(--border);
-  border-radius:9px;
-  color:var(--text);
-}
-textarea { resize:vertical; }
-button.primary {
-  background:var(--blue);
-  color:white;
-  border:0;
-  border-radius:9px;
-  padding:11px 17px;
-  font-weight:700;
-}
-button.secondary {
-  background:white;
-  border:1px solid var(--border);
-  border-radius:9px;
-  padding:10px 13px;
-}
-button:disabled { opacity:.55;cursor:wait; }
-.login button { width:100%;margin-top:17px; }
-.notice {
-  font-size:13px;
-  color:var(--muted);
-  margin-top:12px;
-  overflow-wrap:anywhere;
-}
-.notice.error { color:var(--red); }
-.notice.success { color:var(--green); }
-.toolbar {
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  margin-bottom:18px;
-}
-.toolbar h2 { margin:0; }
-.user-label { color:var(--muted);font-size:12px; }
-.stats {
-  display:grid;
-  grid-template-columns:repeat(4,1fr);
-  gap:12px;
-  margin-bottom:18px;
-}
-.stat {
-  background:white;
-  border:1px solid var(--border);
-  border-radius:12px;
-  padding:17px;
-}
-.stat span { color:var(--muted);font-size:12px; }
-.stat strong { display:block;font-size:29px;margin-top:5px; }
-.grid {
-  display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:12px;
-}
-.full { grid-column:1/-1; }
-.table-wrap { overflow-x:auto; }
-table { width:100%;border-collapse:collapse;font-size:13px; }
-th,td {
-  padding:11px 9px;
-  border-bottom:1px solid var(--border);
-  text-align:left;
-  white-space:nowrap;
-}
-th { background:#f7f9fc; }
-.tag {
-  display:inline-block;
-  padding:4px 8px;
-  border-radius:7px;
-  background:#e8f0ff;
-  color:#1d4ed8;
-  font-size:11px;
-  font-weight:700;
-}
-.tag.end { background:#f1f5f9;color:#475569; }
-.tag.cancel { background:#fee2e2;color:#991b1b; }
-.actions {
-  display:flex;
-  flex-wrap:wrap;
-  gap:9px;
-  margin-top:17px;
-}
-.small { font-size:12px;color:var(--muted); }
-@media(max-width:700px) {
-  header h1 { font-size:15px; }
-  .stats { grid-template-columns:repeat(2,1fr); }
-  .grid { grid-template-columns:1fr; }
-  .full { grid-column:auto; }
-  .panel { padding:14px; }
-  .stat { padding:12px; }
-  .stat strong { font-size:25px; }
-}
+:root{font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;color:#172b45;background:#f3f6fa}*{box-sizing:border-box}[hidden]{display:none!important}body{margin:0}header{background:#142f53;color:white;padding:17px 22px}.head{max-width:1150px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px}h1{font-size:20px;margin:0}header small{color:#c8d6e9}main{max-width:1150px;margin:24px auto;padding:0 15px}.panel,.stat{background:#fff;border:1px solid #dbe3ef;border-radius:13px;padding:19px;margin-bottom:17px}.login{max-width:420px;margin:60px auto}h2{font-size:19px;margin:0 0 15px}label{display:block;font-weight:600;font-size:13px;margin:12px 0 5px}input,select,textarea{width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:10px;min-height:41px;font:inherit;background:white;color:#172b45}textarea{resize:vertical}button{font:inherit;cursor:pointer;border-radius:8px;padding:10px 15px}button:disabled{opacity:.55;cursor:not-allowed}.primary{background:#1d4ed8;color:#fff;border:1px solid #1d4ed8}.secondary{background:#fff;color:#172b45;border:1px solid #cbd5e1}.login .primary{width:100%;margin-top:18px}.msg{font-size:13px;margin-top:12px;white-space:pre-wrap;overflow-wrap:anywhere}.msg.error{color:#b91c1c}.msg.ok{color:#15803d}.muted{color:#64748b;font-size:12px}.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}.toolbar h2{margin:0 0 4px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.stat{margin:0 0 17px}.stat span{color:#64748b;font-size:12px}.stat strong{display:block;font-size:27px;margin-top:5px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 15px}.full{grid-column:1/-1}.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:11px 9px;border-bottom:1px solid #e2e8f0;white-space:nowrap}th{background:#f8fafc}.tag{display:inline-block;background:#dbeafe;color:#1d4ed8;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700}.tag.done{background:#e2e8f0;color:#475569}.tag.cancel{background:#fee2e2;color:#991b1b}.tag.soon{background:#ffedd5;color:#9a3412}.filter-row{display:flex;gap:12px;align-items:end;flex-wrap:wrap}.filter-row>div{flex:1;min-width:220px}@media(max-width:720px){.stats{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.full{grid-column:auto}.panel{padding:14px}h1{font-size:16px}.stat{padding:12px}}
 </style>
 </head>
-
 <body>
-
-<header>
-  <div class="header-inner">
-    <div>
-      <h1>🛡️ Controle de Afastamentos</h1>
-      <p>14º BPM · Ambiente de testes</p>
-    </div>
-    <button id="logout" class="secondary" hidden>
-      Sair
-    </button>
-  </div>
-</header>
-
+<header><div class="head"><div><h1>🛡️ Controle de Afastamentos</h1><small>14º BPM · Ambiente de testes — dados fictícios</small></div><button class="secondary" id="logout" type="button" hidden>Sair</button></div></header>
 <main>
-
-  <!-- LOGIN -->
-  <section id="loginPage" class="panel login">
-    <h2>Acesso ao sistema</h2>
-    <p class="small">Entre com sua conta autorizada.</p>
-
-    <form id="loginForm">
-      <label for="email">E-mail</label>
-      <input id="email" type="email" required
-             autocomplete="username">
-
-      <label for="password">Senha</label>
-      <input id="password" type="password" required
-             autocomplete="current-password">
-
-      <button id="loginButton" class="primary">
-        Entrar
-      </button>
-    </form>
-
-    <div id="loginMessage" class="notice" role="status"></div>
-  </section>
-
-  <!-- SISTEMA -->
-  <section id="systemPage" hidden>
-
-    <div class="toolbar">
-      <div>
-        <h2>Painel de Afastamentos</h2>
-        <div id="userInfo" class="user-label"></div>
-      </div>
-      <button id="refresh" class="secondary">
-        Atualizar
-      </button>
-    </div>
-
-    <div class="stats">
-      <div class="stat">
-        <span>Policiais cadastrados</span>
-        <strong id="statPoliciais">—</strong>
-      </div>
-      <div class="stat">
-        <span>Afastamentos ativos</span>
-        <strong id="statAtivos">—</strong>
-      </div>
-      <div class="stat">
-        <span>Próximos do término (5 dias)</span>
-        <strong id="statProximos">—</strong>
-      </div>
-      <div class="stat">
-        <span>Encerrados</span>
-        <strong id="statEncerrados">—</strong>
-      </div>
-    </div>
-
-    <section class="panel">
-      <h2>Novo afastamento</h2>
-
-      <form id="afastamentoForm">
-        <div class="grid">
-
-          <div class="full">
-            <label for="policial">Policial</label>
-            <select id="policial" required>
-              <option value="">Selecione...</option>
-            </select>
-          </div>
-
-          <div>
-            <label for="tipo">Tipo de afastamento</label>
-            <select id="tipo" required>
-              <option value="">Selecione...</option>
-            </select>
-          </div>
-
-          <div>
-            <label for="dias">Quantidade de dias</label>
-            <input id="dias" type="number"
-                   min="1" max="3650" required>
-          </div>
-
-          <div>
-            <label for="inicio">Data de início</label>
-            <input id="inicio" type="date" required>
-          </div>
-
-          <div>
-            <label for="fim">Data de término</label>
-            <input id="fim" type="date" readonly required>
-          </div>
-
-          <div class="full">
-            <label for="observacoes">Observações</label>
-            <textarea id="observacoes" rows="2"
-              placeholder="Informações de teste"></textarea>
-          </div>
-        </div>
-
-        <div class="actions">
-          <button id="saveButton" class="primary"
-                  type="submit">
-            Salvar afastamento
-          </button>
-          <button id="clearButton" class="secondary"
-                  type="button">
-            Limpar
-          </button>
-        </div>
-
-        <div id="formMessage" class="notice"
-             role="status"></div>
-      </form>
-    </section>
-
-    <section class="panel">
-      <h2>Registros de afastamentos</h2>
-
-      <label for="filterText">Pesquisar</label>
-      <input id="filterText" type="search"
-        placeholder="Matrícula, QRA, nome ou tipo...">
-
-      <div class="table-wrap" style="margin-top:15px">
-        <table>
-          <thead>
-            <tr>
-              <th>Matrícula</th>
-              <th>QRA</th>
-              <th>Policial</th>
-              <th>Tipo</th>
-              <th>Início</th>
-              <th>Término</th>
-              <th>Dias</th>
-              <th>Situação</th>
-            </tr>
-          </thead>
-          <tbody id="recordsBody"></tbody>
-        </table>
-      </div>
-
-      <p id="recordsInfo" class="small"></p>
-    </section>
-
-  </section>
-
+<section class="panel login" id="loginPage">
+<h2>Acesso ao sistema</h2><p class="muted">Entre com o e-mail e a senha da conta autorizada.</p>
+<form id="loginForm"><label for="email">E-mail</label><input id="email" type="email" autocomplete="username" required><label for="password">Senha</label><input id="password" type="password" autocomplete="current-password" required><button class="primary" id="loginButton" type="submit" disabled>Preparando conexão...</button></form>
+<div class="msg" id="loginMessage" role="status">Inicializando conexão com o Supabase...</div>
+</section>
+<section id="systemPage" hidden>
+<div class="toolbar"><div><h2>Painel de Afastamentos</h2><div class="muted" id="userInfo"></div></div><button class="secondary" id="refresh" type="button">Atualizar</button></div>
+<div class="stats"><div class="stat"><span>Policiais cadastrados</span><strong id="statPoliciais">—</strong></div><div class="stat"><span>Afastamentos ativos</span><strong id="statAtivos">—</strong></div><div class="stat"><span>Próximos do término (5 dias)</span><strong id="statProximos">—</strong></div><div class="stat"><span>Encerrados</span><strong id="statEncerrados">—</strong></div></div>
+<section class="panel"><h2>Novo afastamento</h2><form id="afastamentoForm"><div class="grid">
+<div class="full"><label for="policial">Policial</label><select id="policial" required><option value="">Selecione...</option></select></div>
+<div><label for="tipo">Tipo de afastamento</label><select id="tipo" required><option value="">Selecione...</option></select></div>
+<div><label for="dias">Quantidade de dias</label><input id="dias" type="number" min="1" max="3650" required></div>
+<div><label for="inicio">Data de início</label><input id="inicio" type="date" required></div>
+<div><label for="fim">Data de término</label><input id="fim" type="date" readonly required></div>
+<div class="full"><label for="observacoes">Observações</label><textarea id="observacoes" rows="2" placeholder="Somente informações fictícias"></textarea></div>
+</div><div class="actions"><button class="primary" id="saveButton" type="submit">Salvar afastamento</button><button class="secondary" id="clearButton" type="button">Limpar</button></div><div class="msg" id="formMessage" role="status"></div></form></section>
+<section class="panel"><h2>Registros de afastamentos</h2><div class="filter-row"><div><label for="filterText">Pesquisar</label><input id="filterText" type="search" placeholder="Matrícula, QRA, nome ou tipo..."></div></div><div class="table-wrap" style="margin-top:15px"><table><thead><tr><th>Matrícula</th><th>QRA</th><th>Policial</th><th>Tipo</th><th>Início</th><th>Término</th><th>Dias</th><th>Situação</th></tr></thead><tbody id="recordsBody"></tbody></table></div><p class="muted" id="recordsInfo"></p></section>
+</section>
 </main>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-
 <script>
-"use strict";
-
-/* CONFIGURAÇÃO */
-
-const SUPABASE_URL =
-  "https://kdggkheppzfnavnakdpg.supabase.co";
-
-const SUPABASE_KEY =
-  "sb_publishable_TglXGBSgyQqqE41I8jTrtA_t8b6544Y";
-
+'use strict';
+// SUBSTITUA SOMENTE A CHAVE ABAIXO PELA PUBLISHABLE KEY DO SEU PROJETO.
+// NUNCA UTILIZE service_role, sb_secret_ OU SENHA DO BANCO NESTE ARQUIVO.
+const SUPABASE_URL = 'https://kdggkheppzfnavnakdpg.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_TglXGBSgyQqqE41I8jTrtA_t8b6544Y';
 const $ = id => document.getElementById(id);
-
-let db;
-let usuarioAtual = null;
-let perfilAtual = null;
-let policiais = [];
-let tipos = [];
-let registros = [];
-
-function mensagem(id, texto, erro = false) {
-  const e = $(id);
-  e.textContent = texto;
-  e.className = "notice " + (erro ? "error" : "success");
-}
-
-function dataISO(date) {
-  return [
-    date.getUTCFullYear(),
-    String(date.getUTCMonth() + 1).padStart(2,"0"),
-    String(date.getUTCDate()).padStart(2,"0")
-  ].join("-");
-}
-
-function somarDias(iso, dias) {
-  const d = new Date(iso + "T00:00:00Z");
-  d.setUTCDate(d.getUTCDate() + dias);
-  return dataISO(d);
-}
-
-function hojeISO() {
-  const agora = new Date();
-  const ano = agora.getFullYear();
-  const mes = String(agora.getMonth()+1).padStart(2,"0");
-  const dia = String(agora.getDate()).padStart(2,"0");
-  return `${ano}-${mes}-${dia}`;
-}
-
-function formatarData(iso) {
-  if (!iso) return "";
-  const [ano,mes,dia] = iso.split("-");
-  return `${dia}/${mes}/${ano}`;
-}
-
-function diferencaDias(inicio, fim) {
-  return Math.round(
-    (Date.parse(fim+"T00:00:00Z") -
-     Date.parse(inicio+"T00:00:00Z")) / 86400000
-  );
-}
-
-function criarOpcao(valor, texto) {
-  const option = document.createElement("option");
-  option.value = valor;
-  option.textContent = texto;
-  return option;
-}
-
-/* AUTENTICAÇÃO */
-
-async function entrar() {
-  const email = $("email").value.trim();
-  const password = $("password").value;
-
-  $("loginButton").disabled = true;
-  mensagem("loginMessage","Verificando acesso...");
-
-  const {error} = await db.auth.signInWithPassword({
-    email, password
-  });
-
-  $("loginButton").disabled = false;
-  $("password").value = "";
-
-  if (error) {
-    mensagem("loginMessage",
-      "Não foi possível entrar. Confira suas credenciais.",
-      true);
-    return;
-  }
-
-  await verificarSessao();
-}
-
-async function verificarSessao() {
-  const {data, error} = await db.auth.getUser();
-
-  if (error || !data.user) {
-    exibirLogin();
-    return;
-  }
-
-  const {data:perfil, error:erroPerfil} = await db
-    .from("perfis")
-    .select("nome,perfil,ativo")
-    .eq("id",data.user.id)
-    .single();
-
-  if (erroPerfil || !perfil || !perfil.ativo) {
-    await db.auth.signOut();
-    exibirLogin();
-    mensagem("loginMessage",
-      "Usuário ainda não autorizado pelo administrador.",
-      true);
-    return;
-  }
-
-  usuarioAtual = data.user;
-  perfilAtual = perfil;
-
-  $("loginPage").hidden = true;
-  $("systemPage").hidden = false;
-  $("logout").hidden = false;
-
-  $("userInfo").textContent =
-    `${perfil.nome} · ${perfil.perfil}`;
-
+let db = null, usuarioAtual = null, perfilAtual = null;
+let policiais = [], tipos = [], registros = [];
+const setMsg = (id, msg, erro=false) => { const e=$(id); e.textContent=msg; e.className='msg '+(erro?'error':'ok'); };
+function hojeISO(){const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');}
+function somarDias(iso,n){const d=new Date(iso+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);}
+function formatarData(s){return s?s.split('-').reverse().join('/'):'';}
+function opcao(v,t){const e=document.createElement('option');e.value=v;e.textContent=t;return e;}
+function exibirLogin(){usuarioAtual=null;perfilAtual=null;policiais=[];tipos=[];registros=[];$('loginPage').hidden=false;$('systemPage').hidden=true;$('logout').hidden=true;}
+function erroAmigavel(error){const codigo=error?.code||'';const msg=error?.message||String(error);if(codigo==='invalid_credentials'||/Invalid login credentials/i.test(msg))return 'E-mail ou senha incorretos. Confira a conta criada em Authentication → Users.';if(codigo==='email_not_confirmed'||/Email not confirmed/i.test(msg))return 'E-mail ainda não confirmado no Supabase.';if(/Invalid API key/i.test(msg))return 'Chave pública inválida. Confira a Publishable key do mesmo projeto.';return msg;}
+async function verificarSessao(){
+  if(!db)throw new Error('Conexão com o Supabase não inicializada.');
+  const {data,error}=await db.auth.getUser();
+  if(error||!data?.user){exibirLogin();return;}
+  const {data:perfil,error:erroPerfil}=await db.from('perfis').select('nome,perfil,ativo').eq('id',data.user.id).maybeSingle();
+  if(erroPerfil)throw new Error('Não foi possível consultar o perfil: '+erroPerfil.message);
+  if(!perfil||!perfil.ativo){await db.auth.signOut();exibirLogin();setMsg('loginMessage','Conta autenticada, mas ainda não autorizada. Ative o perfil no SQL Editor.',true);return;}
+  usuarioAtual=data.user;perfilAtual=perfil;
+  $('loginPage').hidden=true;$('systemPage').hidden=false;$('logout').hidden=false;
+  $('userInfo').textContent=perfil.nome+' · '+perfil.perfil;
   await carregarDados();
 }
-
-function exibirLogin() {
-  usuarioAtual = null;
-  perfilAtual = null;
-  policiais = [];
-  tipos = [];
-  registros = [];
-
-  $("systemPage").hidden = true;
-  $("loginPage").hidden = false;
-  $("logout").hidden = true;
+async function entrar(){
+  const botao=$('loginButton');botao.disabled=true;setMsg('loginMessage','Verificando acesso...');
+  try{
+    if(!db?.auth)throw new Error('A conexão não foi inicializada. Recarregue a página e verifique a configuração.');
+    const {error}=await db.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});
+    if(error)throw error;
+    $('password').value='';
+    await verificarSessao();
+  }catch(error){console.error('Falha no login:',error);setMsg('loginMessage','Não foi possível entrar: '+erroAmigavel(error),true);}
+  finally{botao.disabled=!db?.auth;botao.textContent='Entrar';}
 }
-
-async function sair() {
-  await db.auth.signOut();
-  exibirLogin();
+async function sair(){try{if(db)await db.auth.signOut();}catch(e){console.error(e);}finally{exibirLogin();setMsg('loginMessage','Sessão encerrada.');}}
+async function carregarDados(){
+  $('recordsInfo').textContent='Carregando registros...';
+  try{
+    const [p,t,a]=await Promise.all([
+      db.from('policiais').select('id,matricula,posto_graduacao,qra,nome_completo').eq('ativo',true).order('nome_completo'),
+      db.from('tipos_afastamento').select('id,sigla,descricao,dias_fixos').eq('ativo',true).order('sigla'),
+      db.from('afastamentos').select('id,policial_id,tipo_id,data_inicio,data_fim,dias,cancelado_em,policiais(matricula,qra,nome_completo),tipos_afastamento(sigla)').order('data_inicio',{ascending:false}).limit(1000)
+    ]);
+    if(p.error||t.error||a.error)throw p.error||t.error||a.error;
+    policiais=p.data||[];tipos=t.data||[];registros=a.data||[];
+    preencherSeletores();atualizarPainel();mostrarRegistros();
+  }catch(error){console.error('Erro ao carregar dados:',error);$('recordsInfo').textContent='Erro ao consultar registros: '+erroAmigavel(error);}
 }
-
-/* DADOS */
-
-async function carregarDados() {
-  $("recordsInfo").textContent = "Carregando registros...";
-
-  const [p,t,a] = await Promise.all([
-    db.from("policiais")
-      .select("id,matricula,posto_graduacao,qra,nome_completo")
-      .eq("ativo",true)
-      .order("nome_completo"),
-
-    db.from("tipos_afastamento")
-      .select("id,sigla,descricao,dias_fixos")
-      .eq("ativo",true)
-      .order("sigla"),
-
-    db.from("afastamentos")
-      .select(
-        "id,policial_id,tipo_id,data_inicio,data_fim," +
-        "dias,observacoes,cancelado_em," +
-        "policiais(matricula,qra,nome_completo)," +
-        "tipos_afastamento(sigla)"
-      )
-      .order("data_inicio",{ascending:false})
-      .limit(1000)
-  ]);
-
-  if (p.error || t.error || a.error) {
-    $("recordsInfo").textContent =
-      "Erro ao consultar o banco. Verifique as permissões.";
-    return;
-  }
-
-  policiais = p.data || [];
-  tipos = t.data || [];
-  registros = a.data || [];
-
-  preencherSeletores();
-  atualizarPainel();
-  mostrarRegistros();
+function preencherSeletores(){
+  const p=$('policial'),t=$('tipo');p.replaceChildren(opcao('','Selecione o policial'));t.replaceChildren(opcao('','Selecione o tipo'));
+  policiais.forEach(x=>p.appendChild(opcao(x.id,`${x.matricula} · ${x.qra} · ${x.nome_completo}`)));
+  tipos.forEach(x=>t.appendChild(opcao(x.id,`${x.sigla} - ${x.descricao}`)));
 }
-
-function preencherSeletores() {
-  const selectPolicial = $("policial");
-  const selectTipo = $("tipo");
-
-  selectPolicial.replaceChildren(
-    criarOpcao("","Selecione o policial")
-  );
-
-  selectTipo.replaceChildren(
-    criarOpcao("","Selecione o tipo")
-  );
-
-  policiais.forEach(p => {
-    selectPolicial.appendChild(
-      criarOpcao(p.id,
-        `${p.matricula} · ${p.qra} · ${p.nome_completo}`)
-    );
-  });
-
-  tipos.forEach(t => {
-    selectTipo.appendChild(
-      criarOpcao(t.id,`${t.sigla} - ${t.descricao}`)
-    );
-  });
+function atualizarTipo(){const t=tipos.find(x=>String(x.id)===$('tipo').value);if(t&&t.dias_fixos!==null){$('dias').value=t.dias_fixos;$('dias').readOnly=true;}else{$('dias').value='';$('dias').readOnly=false;}calcularTermino();}
+function calcularTermino(){const ini=$('inicio').value,n=Number($('dias').value);$('fim').value=ini&&Number.isInteger(n)&&n>=1&&n<=3650?somarDias(ini,n-1):'';}
+async function salvarAfastamento(){
+  const botao=$('saveButton');
+  try{
+    if(!usuarioAtual)throw new Error('Sessão não autenticada.');
+    const policial_id=Number($('policial').value),tipo_id=Number($('tipo').value),data_inicio=$('inicio').value,data_fim=$('fim').value,dias=Number($('dias').value);
+    if(!policial_id||!tipo_id||!data_inicio||!data_fim||!Number.isInteger(dias)||dias<1)throw new Error('Preencha todos os campos obrigatórios.');
+    const t=tipos.find(x=>x.id===tipo_id);
+    if(t?.dias_fixos!==null&&t?.dias_fixos!==undefined&&dias!==t.dias_fixos)throw new Error('A duração deve respeitar os dias fixos do tipo.');
+    botao.disabled=true;setMsg('formMessage','Salvando...');
+    const {error}=await db.from('afastamentos').insert({policial_id,tipo_id,data_inicio,data_fim,observacoes:$('observacoes').value.trim()||null,criado_por:usuarioAtual.id});
+    if(error)throw error;
+    $('afastamentoForm').reset();$('dias').readOnly=false;
+    setMsg('formMessage','Afastamento cadastrado com sucesso!');await carregarDados();
+  }catch(error){console.error('Erro ao salvar:',error);setMsg('formMessage',error.code==='23P01'?'Já existe afastamento sobreposto para este policial.':'Não foi possível salvar: '+erroAmigavel(error),true);}
+  finally{botao.disabled=false;}
 }
-
-/* CÁLCULO DE DATAS */
-
-function atualizarTipo() {
-  const tipo = tipos.find(
-    t => String(t.id) === $("tipo").value
-  );
-
-  if (tipo && tipo.dias_fixos !== null) {
-    $("dias").value = tipo.dias_fixos;
-    $("dias").readOnly = true;
-  } else {
-    $("dias").readOnly = false;
-    $("dias").value = "";
-  }
-
-  calcularTermino();
+function situacao(r){const h=hojeISO();if(r.cancelado_em)return 'Cancelado';if(r.data_fim<h)return 'Encerrado';if(r.data_inicio>h)return 'Programado';return 'Ativo';}
+function atualizarPainel(){const h=hojeISO(),limite=somarDias(h,5),validos=registros.filter(r=>!r.cancelado_em),ativos=validos.filter(r=>r.data_inicio<=h&&r.data_fim>=h);$('statPoliciais').textContent=policiais.length;$('statAtivos').textContent=ativos.length;$('statProximos').textContent=ativos.filter(r=>r.data_fim<=limite).length;$('statEncerrados').textContent=validos.filter(r=>r.data_fim<h).length;}
+function mostrarRegistros(){
+  const filtro=$('filterText').value.toLowerCase().trim(),tbody=$('recordsBody');tbody.replaceChildren();
+  const filtrados=registros.filter(r=>[r.policiais?.matricula,r.policiais?.qra,r.policiais?.nome_completo,r.tipos_afastamento?.sigla].join(' ').toLowerCase().includes(filtro));
+  filtrados.forEach(r=>{const tr=document.createElement('tr');const s=situacao(r);[r.policiais?.matricula||'',r.policiais?.qra||'',r.policiais?.nome_completo||'',r.tipos_afastamento?.sigla||'',formatarData(r.data_inicio),formatarData(r.data_fim),String(r.dias),s].forEach((v,i)=>{const td=document.createElement('td');if(i===7){const tag=document.createElement('span');tag.className='tag '+(s==='Encerrado'?'done':s==='Cancelado'?'cancel':s==='Ativo'&&r.data_fim<=somarDias(hojeISO(),5)?'soon':'');tag.textContent=v;td.appendChild(tag);}else{td.textContent=v;}tr.appendChild(td);});tbody.appendChild(tr);});
+  $('recordsInfo').textContent=`${filtrados.length} registro(s) exibido(s). Consulta limitada aos 1.000 mais recentes.`;
 }
-
-function calcularTermino() {
-  const inicio = $("inicio").value;
-  const dias = Number($("dias").value);
-
-  if (
-    !inicio ||
-    !Number.isInteger(dias) ||
-    dias < 1 ||
-    dias > 3650
-  ) {
-    $("fim").value = "";
-    return;
-  }
-
-  $("fim").value = somarDias(inicio,dias-1);
+$('loginForm').addEventListener('submit',e=>{e.preventDefault();void entrar();});
+$('afastamentoForm').addEventListener('submit',e=>{e.preventDefault();void salvarAfastamento();});
+$('tipo').addEventListener('change',atualizarTipo);$('inicio').addEventListener('change',calcularTermino);$('dias').addEventListener('input',calcularTermino);
+$('clearButton').addEventListener('click',()=>{$('afastamentoForm').reset();$('dias').readOnly=false;$('formMessage').textContent='';});
+$('filterText').addEventListener('input',mostrarRegistros);$('refresh').addEventListener('click',()=>{void carregarDados();});$('logout').addEventListener('click',()=>{void sair();});
+async function iniciar(){
+  const botao=$('loginButton');botao.disabled=true;
+  try{
+    if(!window.supabase?.createClient)throw new Error('Biblioteca do Supabase não carregou. Verifique sua conexão e atualize a página.');
+    if(!SUPABASE_KEY||SUPABASE_KEY.includes('COLE_AQUI')||SUPABASE_KEY.includes('SUA_CHAVE'))throw new Error('Cole sua Publishable key no código antes de publicar.');
+    if(SUPABASE_KEY.startsWith('sb_secret_'))throw new Error('Não use chave secreta no site. Utilize a Publishable key.');
+    db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+    if(!db?.auth)throw new Error('Não foi possível inicializar a conexão com o Supabase.');
+    console.info('Cliente Supabase inicializado.');
+    setMsg('loginMessage','Conexão inicializada.');
+    await verificarSessao();
+  }catch(error){console.error('Erro de inicialização:',error);setMsg('loginMessage','Erro de configuração: '+erroAmigavel(error),true);}
+  finally{botao.disabled=!db?.auth;botao.textContent='Entrar';}
 }
-
-/* SALVAR */
-
-async function salvarAfastamento() {
-  if (!usuarioAtual) return;
-
-  const policial_id = Number($("policial").value);
-  const tipo_id = Number($("tipo").value);
-  const data_inicio = $("inicio").value;
-  const data_fim = $("fim").value;
-  const dias = Number($("dias").value);
-  const observacoes = $("observacoes").value.trim();
-
-  if (
-    !policial_id ||
-    !tipo_id ||
-    !data_inicio ||
-    !data_fim ||
-    !Number.isInteger(dias) ||
-    dias < 1
-  ) {
-    mensagem("formMessage",
-      "Preencha todos os campos obrigatórios.",true);
-    return;
-  }
-
-  const tipo = tipos.find(t => t.id === tipo_id);
-
-  if (tipo && tipo.dias_fixos !== null &&
-      dias !== tipo.dias_fixos) {
-    mensagem("formMessage",
-      "A duração deve respeitar os dias fixos.",true);
-    return;
-  }
-
-  $("saveButton").disabled = true;
-  mensagem("formMessage","Salvando...");
-
-  const {error} = await db
-    .from("afastamentos")
-    .insert({
-      policial_id,
-      tipo_id,
-      data_inicio,
-      data_fim,
-      observacoes:observacoes || null,
-      criado_por:usuarioAtual.id
-    });
-
-  $("saveButton").disabled = false;
-
-  if (error) {
-    const sobreposicao =
-      error.code === "23P01";
-
-    mensagem(
-      "formMessage",
-      sobreposicao
-        ? "Já existe um afastamento nesse período para o policial."
-        : "Não foi possível salvar: " + error.message,
-      true
-    );
-    return;
-  }
-
-  $("afastamentoForm").reset();
-  $("dias").readOnly = false;
-
-  mensagem("formMessage",
-    "Afastamento cadastrado com sucesso!");
-
-  await carregarDados();
-}
-
-/* PAINEL */
-
-function atualizarPainel() {
-  const hoje = hojeISO();
-  const limite = somarDias(hoje,5);
-
-  const validos = registros.filter(
-    r => !r.cancelado_em
-  );
-
-  const ativos = validos.filter(
-    r => r.data_inicio <= hoje &&
-         r.data_fim >= hoje
-  );
-
-  $("statPoliciais").textContent = policiais.length;
-  $("statAtivos").textContent = ativos.length;
-
-  $("statProximos").textContent =
-    ativos.filter(r => r.data_fim <= limite).length;
-
-  $("statEncerrados").textContent =
-    validos.filter(r => r.data_fim < hoje).length;
-}
-
-/* REGISTROS */
-
-function situacao(r) {
-  if (r.cancelado_em) return "Cancelado";
-
-  const hoje = hojeISO();
-
-  if (r.data_fim < hoje) return "Encerrado";
-  if (r.data_inicio > hoje) return "Programado";
-
-  return "Ativo";
-}
-
-function mostrarRegistros() {
-  const filtro = $("filterText").value
-    .toLowerCase().trim();
-
-  const tbody = $("recordsBody");
-  tbody.replaceChildren();
-
-  const filtrados = registros.filter(r => {
-    const p = r.policiais || {};
-    const t = r.tipos_afastamento || {};
-
-    return [
-      p.matricula,
-      p.qra,
-      p.nome_completo,
-      t.sigla
-    ].join(" ").toLowerCase().includes(filtro);
-  });
-
-  filtrados.forEach(r => {
-    const p = r.policiais || {};
-    const t = r.tipos_afastamento || {};
-    const tr = document.createElement("tr");
-
-    const valores = [
-      p.matricula || "",
-      p.qra || "",
-      p.nome_completo || "",
-      t.sigla || "",
-      formatarData(r.data_inicio),
-      formatarData(r.data_fim),
-      String(r.dias),
-      situacao(r)
-    ];
-
-    valores.forEach((valor,indice) => {
-      const td = document.createElement("td");
-
-      if (indice === 7) {
-        const span = document.createElement("span");
-        span.className = "tag " +
-          (valor === "Encerrado" ? "end" :
-           valor === "Cancelado" ? "cancel" : "");
-        span.textContent = valor;
-        td.appendChild(span);
-      } else {
-        td.textContent = valor;
-      }
-
-      tr.appendChild(td);
-    });
-
-    tbody.appendChild(tr);
-  });
-
-  $("recordsInfo").textContent =
-    `${filtrados.length} registro(s) exibido(s). ` +
-    "Consulta limitada aos 1.000 registros mais recentes.";
-}
-
-/* EVENTOS */
-
-$("loginForm").addEventListener("submit",async e => {
-  e.preventDefault();
-  await entrar();
-});
-
-$("afastamentoForm").addEventListener("submit",async e => {
-  e.preventDefault();
-  await salvarAfastamento();
-});
-
-$("tipo").addEventListener("change",atualizarTipo);
-$("inicio").addEventListener("change",calcularTermino);
-$("dias").addEventListener("input",calcularTermino);
-
-$("clearButton").onclick = () => {
-  $("afastamentoForm").reset();
-  $("dias").readOnly = false;
-  $("formMessage").textContent = "";
-};
-
-$("filterText").addEventListener("input",mostrarRegistros);
-$("refresh").onclick = carregarDados;
-$("logout").onclick = sair;
-
-/* INICIALIZAÇÃO */
-
-async function iniciar() {
-  if (
-    SUPABASE_KEY === "sb_publishable_TglXGBSgyQqqE41I8jTrtA_t8b6544Y"
-  ) {
-    mensagem("loginMessage",
-      "Configure a Publishable key no código.",true);
-    return;
-  }
-
-  if (!window.supabase) {
-    mensagem("loginMessage",
-      "Não foi possível carregar a biblioteca Supabase.",true);
-    return;
-  }
-
-  db = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
-  );
-
-  await verificarSessao();
-}
-
-iniciar();
+void iniciar();
 </script>
-
 </body>
 </html>
