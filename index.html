@@ -6,6 +6,10 @@
 <style>
 :root{font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;color:#172b45;background:#f3f6fa}*{box-sizing:border-box}[hidden]{display:none!important}body{margin:0}header{background:#142f53;color:white;padding:17px 22px}.head{max-width:1150px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px}h1{font-size:20px;margin:0}header small{color:#c8d6e9}main{max-width:1150px;margin:24px auto;padding:0 15px}.panel,.stat{background:#fff;border:1px solid #dbe3ef;border-radius:13px;padding:19px;margin-bottom:17px}.login{max-width:420px;margin:60px auto}h2{font-size:19px;margin:0 0 15px}label{display:block;font-weight:600;font-size:13px;margin:12px 0 5px}input,select,textarea{width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:10px;min-height:41px;font:inherit;background:white;color:#172b45}textarea{resize:vertical}button{font:inherit;cursor:pointer;border-radius:8px;padding:10px 15px}button:disabled{opacity:.55;cursor:not-allowed}.primary{background:#1d4ed8;color:#fff;border:1px solid #1d4ed8}.secondary{background:#fff;color:#172b45;border:1px solid #cbd5e1}.login .primary{width:100%;margin-top:18px}.msg{font-size:13px;margin-top:12px;white-space:pre-wrap;overflow-wrap:anywhere}.msg.error{color:#b91c1c}.msg.ok{color:#15803d}.muted{color:#64748b;font-size:12px}.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}.toolbar h2{margin:0 0 4px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.stat{margin:0 0 17px}.stat span{color:#64748b;font-size:12px}.stat strong{display:block;font-size:27px;margin-top:5px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 15px}.full{grid-column:1/-1}.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:11px 9px;border-bottom:1px solid #e2e8f0;white-space:nowrap}th{background:#f8fafc}.tag{display:inline-block;background:#dbeafe;color:#1d4ed8;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700}.tag.done{background:#e2e8f0;color:#475569}.tag.cancel{background:#fee2e2;color:#991b1b}.tag.soon{background:#ffedd5;color:#9a3412}.filter-row{display:flex;gap:12px;align-items:end;flex-wrap:wrap}.filter-row>div{flex:1;min-width:220px}@media(max-width:720px){.stats{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.full{grid-column:auto}.panel{padding:14px}h1{font-size:16px}.stat{padding:12px}}
 .tag.av{background:#fef3c7;color:#92400e}.tag.noav{background:#f1f5f9;color:#475569}.filter-row>div{min-width:170px}.summary{font-size:12px;color:#475569;margin:8px 0}.warning{color:#9a3412;font-size:12px}.danger{background:#b91c1c;color:white;border:1px solid #b91c1c}.mini{padding:5px 9px;font-size:12px}.admin-box{border-left:4px solid #1d4ed8}.subtle{background:#f8fafc}.edit-actions{display:flex;gap:5px}.help{font-size:12px;color:#64748b;margin:8px 0}
+
+.report-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:14px 0}.report-stat{background:#f8fafc;border:1px solid #dbe3ef;border-radius:10px;padding:12px}.report-stat strong{display:block;font-size:24px}.report-stat span{font-size:12px;color:#64748b}.report-note{font-size:12px;color:#475569}.report-print-title{display:none}
+@media(max-width:720px){.report-stats{grid-template-columns:1fr}}
+@media print{body{background:white;color:black}header,.login,.toolbar button,#afastamentoForm,#formTitle,#formHelp,#formMessage,#cancelEditButton,#clearButton,#saveButton,#exportCsv,#auditPanel,.stats,#recordsBody,#recordsInfo,#avisoAverbacao,.filter-row,.panel:not(#reportPanel){display:none!important}main{margin:0;max-width:none;padding:0}#systemPage,#reportPanel{display:block!important}#reportPanel{border:0;padding:0;margin:0}#reportPanel .actions,#reportPanel .filter-row{display:none!important}.report-print-title{display:block;font-size:14px;margin:5px 0 20px}.report-stats{grid-template-columns:repeat(3,1fr)}table{font-size:10px}th,td{white-space:normal;padding:5px} @page{size:A4 landscape;margin:12mm}}
 </style>
 </head>
 <body>
@@ -28,6 +32,25 @@
 <div class="full"><label for="observacoes">Observações</label><textarea id="observacoes" rows="2" placeholder="Somente informações fictícias"></textarea></div>
 </div><div class="actions"><button class="primary" id="saveButton" type="submit">Salvar afastamento</button><button class="secondary" id="clearButton" type="button">Limpar</button><button class="secondary" id="cancelEditButton" type="button" hidden>Cancelar edição</button></div><div class="msg" id="formMessage" role="status"></div></form></section>
 <section class="panel"><div class="toolbar"><h2>Registros de afastamentos</h2><button class="secondary" id="exportCsv" type="button">Exportar CSV (Excel)</button></div><div class="filter-row"><div><label for="filterText">Pesquisar</label><input id="filterText" type="search" placeholder="Matrícula, QRA, nome ou tipo..."></div><div><label for="filterPolicial">Policial</label><select id="filterPolicial"><option value="">Todos</option></select></div><div><label for="filterMes">Mês de início</label><input id="filterMes" type="month"></div><div><label for="filterAverbacao">Averbação</label><select id="filterAverbacao"><option value="">Todas</option><option value="AVERBAR">Averbar</option><option value="NAO AVERBAR">Não averbar</option><option value="NAO APLICAVEL">Não aplicável</option></select></div></div><p class="summary" id="avisoAverbacao">Averbação calculada para DM e LTSP, conforme a view de testes.</p><div class="table-wrap" style="margin-top:15px"><table><thead><tr><th>Matrícula</th><th>QRA</th><th>Policial</th><th>Tipo</th><th>Início</th><th>Término</th><th>Dias</th><th>Situação</th><th>Averbação</th><th>Dias no ciclo</th><th>Período do ciclo</th><th id="actionsHeader" hidden>Ações (admin)</th></tr></thead><tbody id="recordsBody"></tbody></table></div><p class="muted" id="recordsInfo"></p></section>
+<section class="panel" id="reportPanel">
+<h2>Relatório gerencial</h2>
+<p class="help">Relatório por data de início. Inclui apenas registros carregados (até 1.000); afastamentos cancelados são excluídos. A averbação permanece indicativa.</p>
+<div class="filter-row">
+<div><label for="reportStart">Início do período</label><input id="reportStart" type="date"></div>
+<div><label for="reportEnd">Fim do período</label><input id="reportEnd" type="date"></div>
+<div><label for="reportPolicial">Policial</label><select id="reportPolicial"><option value="">Todos</option></select></div>
+<div><label for="reportTipo">Tipo</label><select id="reportTipo"><option value="">Todos</option></select></div>
+</div>
+<div class="report-stats">
+<div class="report-stat"><span>Afastamentos no relatório</span><strong id="reportCount">0</strong></div>
+<div class="report-stat"><span>Policiais distintos</span><strong id="reportPeople">0</strong></div>
+<div class="report-stat"><span>Total de dias dos registros</span><strong id="reportDays">0</strong></div>
+</div>
+<div class="actions"><button type="button" class="secondary" id="reportClear">Limpar filtros</button><button type="button" class="primary" id="reportPrint">Imprimir / Salvar PDF</button><button type="button" class="secondary" id="reportCsv">Exportar relatório CSV</button></div>
+<p class="report-print-title" id="reportPrintInfo"></p>
+<div class="table-wrap" style="margin-top:15px"><table><thead><tr><th>Matrícula</th><th>QRA</th><th>Nome</th><th>Tipo</th><th>Início</th><th>Término</th><th>Dias</th><th>Situação</th></tr></thead><tbody id="reportBody"></tbody></table></div>
+<p class="muted" id="reportInfo"></p>
+</section>
 <section class="panel admin-box" id="auditPanel" hidden><h2>Auditoria (administradores)</h2><p class="help">Últimas 100 alterações registradas pelo banco. Não altere diretamente a tabela de auditoria.</p><div class="table-wrap"><table><thead><tr><th>Data/hora</th><th>Operação</th><th>Registro</th><th>Usuário (ID)</th></tr></thead><tbody id="auditBody"></tbody></table></div><p class="muted" id="auditInfo"></p></section>
 </section>
 </main>
@@ -93,7 +116,7 @@ async function carregarDados(){
     $('avisoAverbacao').textContent=v.error
       ? 'Não foi possível consultar a view de averbações: '+v.error.message
       : 'Averbação indicativa: DM/LTSP por ciclo de 30 dias; a situação é do ciclo completo, não do evento individual. Os demais tipos são não aplicáveis.';
-    preencherSeletores();atualizarPainel();mostrarRegistros();
+    preencherSeletores();preencherFiltroRelatorio();atualizarPainel();mostrarRegistros();atualizarRelatorio();
     if(ehAdmin()) await carregarAuditoria();
   }catch(error){console.error('Erro ao carregar dados:',error);$('recordsInfo').textContent='Erro ao consultar registros: '+erroAmigavel(error);}
 }
@@ -103,6 +126,13 @@ function preencherSeletores(){
   tipos.forEach(x=>t.appendChild(opcao(x.id,`${x.sigla} - ${x.descricao}`)));
   const filtro=$('filterPolicial'),selecionado=filtro.value;filtro.replaceChildren(opcao('','Todos'));
   policiais.forEach(x=>filtro.appendChild(opcao(x.id,`${x.matricula} · ${x.qra}`)));filtro.value=selecionado;
+}
+function preencherFiltroRelatorio(){
+  const p=$('reportPolicial'),t=$('reportTipo'),pv=p.value,tv=t.value;
+  p.replaceChildren(opcao('','Todos'));t.replaceChildren(opcao('','Todos'));
+  policiais.forEach(x=>p.appendChild(opcao(x.id,`${x.matricula} · ${x.qra} · ${x.nome_completo}`)));
+  tipos.forEach(x=>t.appendChild(opcao(x.id,`${x.sigla} - ${x.descricao}`)));
+  p.value=pv;t.value=tv;
 }
 function atualizarTipo(){const t=tipos.find(x=>String(x.id)===$('tipo').value);if(t&&t.dias_fixos!==null){$('dias').value=t.dias_fixos;$('dias').readOnly=true;}else{$('dias').value='';$('dias').readOnly=false;}calcularTermino();}
 function calcularTermino(){const ini=$('inicio').value,n=Number($('dias').value);$('fim').value=ini&&Number.isInteger(n)&&n>=1&&n<=3650?somarDias(ini,n-1):'';}
@@ -257,6 +287,41 @@ function exportarCsv(){
   const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
   const link=document.createElement('a');link.href=url;link.download='relatorio_afastamentos_'+hojeISO()+'.csv';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
+function dadosRelatorio(){
+  const ini=$('reportStart').value,fim=$('reportEnd').value,pol=$('reportPolicial').value,tipo=$('reportTipo').value;
+  return registros.filter(r=>!r.cancelado_em && (!ini||r.data_inicio>=ini) && (!fim||r.data_inicio<=fim) && (!pol||String(r.policial_id)===pol) && (!tipo||String(r.tipo_id)===tipo));
+}
+function atualizarRelatorio(){
+  const dados=dadosRelatorio(),tbody=$('reportBody');tbody.replaceChildren();
+  $('reportCount').textContent=dados.length;
+  $('reportPeople').textContent=new Set(dados.map(r=>r.policial_id)).size;
+  $('reportDays').textContent=dados.reduce((s,r)=>s+Number(r.dias||0),0);
+  for(const r of dados){
+    const tr=document.createElement('tr');
+    [r.policiais?.matricula||'',r.policiais?.qra||'',r.policiais?.nome_completo||'',r.tipos_afastamento?.sigla||'',formatarData(r.data_inicio),formatarData(r.data_fim),r.dias,situacao(r)].forEach(v=>{const td=document.createElement('td');td.textContent=String(v);tr.appendChild(td);});
+    tbody.appendChild(tr);
+  }
+  $('reportInfo').textContent=`${dados.length} registro(s) no relatório. Base limitada aos 1.000 afastamentos mais recentes; filtro por data de início.`;
+  $('reportPrintInfo').textContent=`14º BPM — Relatório de Afastamentos | Período: ${formatarData($('reportStart').value)||'sem início definido'} a ${formatarData($('reportEnd').value)||'sem fim definido'} | Gerado em ${formatarData(hojeISO())}`;
+}
+function validarPeriodoRelatorio(){
+  const ini=$('reportStart').value,fim=$('reportEnd').value;
+  if(ini&&fim&&ini>fim){alert('A data inicial não pode ser posterior à data final.');return false;}
+  return true;
+}
+function exportarRelatorioCsv(){
+  if(!validarPeriodoRelatorio())return;
+  const linhas=[['Matrícula','QRA','Policial','Tipo','Início','Término','Dias','Situação']];
+  dadosRelatorio().forEach(r=>linhas.push([r.policiais?.matricula||'',r.policiais?.qra||'',r.policiais?.nome_completo||'',r.tipos_afastamento?.sigla||'',formatarData(r.data_inicio),formatarData(r.data_fim),r.dias,situacao(r)]));
+  const celula=v=>{let t=String(v??'');if(/^[\s]*[=+@-]/.test(t))t="'"+t;return '"'+t.replace(/"/g,'""')+'"';};
+  const csv='\uFEFF'+linhas.map(l=>l.map(celula).join(';')).join('\r\n');
+  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+  const link=document.createElement('a');link.href=url;link.download='relatorio_gerencial_'+hojeISO()+'.csv';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+['reportStart','reportEnd','reportPolicial','reportTipo'].forEach(id=>$(id).addEventListener('change',atualizarRelatorio));
+$('reportClear').addEventListener('click',()=>{['reportStart','reportEnd','reportPolicial','reportTipo'].forEach(id=>$(id).value='');atualizarRelatorio();});
+$('reportPrint').addEventListener('click',()=>{if(!validarPeriodoRelatorio())return;atualizarRelatorio();window.print();});
+$('reportCsv').addEventListener('click',exportarRelatorioCsv);
 $('exportCsv').addEventListener('click',exportarCsv);
 $('loginForm').addEventListener('submit',e=>{e.preventDefault();void entrar();});
 $('afastamentoForm').addEventListener('submit',e=>{e.preventDefault();void salvarAfastamento();});
