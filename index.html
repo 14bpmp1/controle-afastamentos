@@ -99,7 +99,7 @@
 <div class="audit-controls">
 <div><label for="auditStart">De</label><input id="auditStart" type="date"></div>
 <div><label for="auditEnd">Até</label><input id="auditEnd" type="date"></div>
-<div><label for="auditOperation">Operação</label><select id="auditOperation"><option value="">Todas</option><option value="INSERT">INSERT (inclusão)</option><option value="UPDATE">UPDATE (alteração)</option><option value="DELETE">DELETE (exclusão)</option></select></div>
+<div><label for="auditOperation">Operação</label><select id="auditOperation"><option value="">Todas</option><option value="INSERT">INSERT (inclusão)</option><option value="UPDATE">UPDATE (alteração)</option><option value="CANCELAMENTO">CANCELAMENTO</option><option value="DELETE">DELETE (exclusão física)</option></select></div>
 <div><label for="auditSearch">Buscar registro ou usuário (ID)</label><input id="auditSearch" type="search" placeholder="ID do registro ou usuário"></div>
 </div>
 <div class="audit-actions"><button type="button" class="secondary" id="auditReload">Consultar auditoria</button><button type="button" class="secondary" id="auditClear">Limpar filtros</button><button type="button" class="primary" id="auditCsv">Exportar CSV filtrado</button></div>
@@ -268,7 +268,7 @@ async function carregarAuditoria(){
   const ini=$('auditStart').value,fim=$('auditEnd').value;
   if(ini&&fim&&ini>fim){$('auditInfo').textContent='A data inicial não pode ser posterior à final.';return;}
   $('auditInfo').textContent='Consultando auditoria...';
-  let q=db.from('auditoria').select('id,operacao,registro_id,usuario_id,data_hora')
+  let q=db.from('auditoria').select('id,operacao,registro_id,usuario_id,data_hora,dados_anteriores,dados_novos')
     .eq('tabela','afastamentos').order('data_hora',{ascending:false}).limit(1000);
   if(ini)q=q.gte('data_hora',ini+'T00:00:00');
   if(fim)q=q.lt('data_hora',somarDias(fim,1)+'T00:00:00');
@@ -277,10 +277,23 @@ async function carregarAuditoria(){
   auditoria=data||[];
   mostrarAuditoria();
 }
+function tipoEventoAuditoria(a){
+  const op=String(a.operacao||'').toUpperCase().trim();
+  if(op==='UPDATE'){
+    const antes=a.dados_anteriores?.cancelado_em ?? null;
+    const depois=a.dados_novos?.cancelado_em ?? null;
+    if(!antes && depois)return 'CANCELAMENTO';
+  }
+  return op;
+}
+function rotuloEventoAuditoria(a){
+  const tipo=tipoEventoAuditoria(a);
+  return ({INSERT:'Inclusão',UPDATE:'Alteração',CANCELAMENTO:'Cancelamento',DELETE:'Exclusão física'})[tipo]||tipo;
+}
 function auditoriaFiltrada(){
   const op=$('auditOperation').value;
   const termo=$('auditSearch').value.trim().toLowerCase();
-  return auditoria.filter(a=>(!op||String(a.operacao).toUpperCase()===op)
+  return auditoria.filter(a=>(!op||tipoEventoAuditoria(a)===op)
     &&(!termo||String(a.registro_id??'').toLowerCase().includes(termo)||String(a.usuario_id??'').toLowerCase().includes(termo)));
 }
 function mostrarAuditoria(){
@@ -288,7 +301,7 @@ function mostrarAuditoria(){
   const dados=auditoriaFiltrada();
   for(const a of dados){
     const tr=document.createElement('tr');
-    [new Date(a.data_hora).toLocaleString('pt-BR'),a.operacao||'',String(a.registro_id??''),a.usuario_id||''].forEach(v=>celula(tr,v));
+    [new Date(a.data_hora).toLocaleString('pt-BR'),rotuloEventoAuditoria(a),String(a.registro_id??''),a.usuario_id||''].forEach(v=>celula(tr,v));
     tbody.appendChild(tr);
   }
   $('auditInfo').textContent=`${dados.length} evento(s) exibido(s) de ${auditoria.length} carregado(s). Limite de 1.000 eventos por consulta.`;
@@ -296,7 +309,7 @@ function mostrarAuditoria(){
 function exportarAuditoriaCsv(){
   if(!ehAdmin())return;
   const linhas=[['Data/hora','Operação','Registro ID','Usuário ID']];
-  auditoriaFiltrada().forEach(a=>linhas.push([new Date(a.data_hora).toLocaleString('pt-BR'),a.operacao||'',a.registro_id??'',a.usuario_id??'']));
+  auditoriaFiltrada().forEach(a=>linhas.push([new Date(a.data_hora).toLocaleString('pt-BR'),rotuloEventoAuditoria(a),a.registro_id??'',a.usuario_id??'']));
   const escapar=v=>{let t=String(v??'');if(/^[\s]*[=+@-]/.test(t))t="'"+t;return '"'+t.replace(/"/g,'""')+'"';};
   const csv='\uFEFF'+linhas.map(l=>l.map(escapar).join(';')).join('\r\n');
   const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
