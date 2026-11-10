@@ -40,7 +40,7 @@
 <div><label for="fim">Data de término</label><input id="fim" type="date" readonly required></div>
 <div class="full"><label for="observacoes">Observações</label><textarea id="observacoes" rows="2" placeholder="Somente informações fictícias"></textarea></div>
 </div><div class="actions"><button class="primary" id="saveButton" type="submit">Salvar afastamento</button><button class="secondary" id="clearButton" type="button">Limpar</button><button class="secondary" id="cancelEditButton" type="button" hidden>Cancelar edição</button></div><div class="msg" id="formMessage" role="status"></div></form></section>
-<section class="panel"><div class="toolbar"><h2>Registros de afastamentos</h2><button class="secondary" id="exportCsv" type="button">Exportar CSV (Excel)</button></div><div class="filter-row"><div><label for="filterText">Pesquisar</label><input id="filterText" type="search" placeholder="Matrícula, QRA, nome ou tipo..."></div><div><label for="filterPolicial">Policial</label><select id="filterPolicial"><option value="">Todos</option></select></div><div><label for="filterMes">Mês de início</label><input id="filterMes" type="month"></div><div><label for="filterAverbacao">Averbação</label><select id="filterAverbacao"><option value="">Todas</option><option value="AVERBAR">Averbar</option><option value="NAO AVERBAR">Não averbar</option><option value="NAO APLICAVEL">Não aplicável</option></select></div></div><p class="summary" id="avisoAverbacao">Averbação calculada para DM e LTSP, conforme a view de testes.</p><div class="table-wrap" style="margin-top:15px"><table><thead><tr><th>Matrícula</th><th>QRA</th><th>Policial</th><th>Tipo</th><th>Início</th><th>Término</th><th>Dias</th><th>Situação</th><th>Averbação</th><th>Dias no ciclo</th><th>Período do ciclo</th><th id="actionsHeader" hidden>Ações (admin)</th></tr></thead><tbody id="recordsBody"></tbody></table></div><p class="muted" id="recordsInfo"></p></section>
+<section class="panel"><div class="toolbar"><h2>Registros de afastamentos</h2><button class="secondary" id="exportCsv" type="button">Exportar CSV (Excel)</button></div><div class="filter-row"><div><label for="filterText">Pesquisar</label><input id="filterText" type="search" placeholder="Matrícula, QRA, nome ou tipo..."></div><div><label for="filterPolicial">Policial</label><select id="filterPolicial"><option value="">Todos</option></select></div><div><label for="filterMes">Mês de início</label><input id="filterMes" type="month"></div><div><label for="filterAverbacao">Averbação</label><select id="filterAverbacao"><option value="">Todas</option><option value="AVERBAR">Averbar</option><option value="NAO AVERBAR">Não averbar</option><option value="NAO APLICAVEL">Não aplicável</option></select></div></div><p class="summary" id="avisoAverbacao">Averbação calculada para DM e LTSP, conforme a view de testes.</p><div class="table-wrap" style="margin-top:15px"><table><thead><tr><th>Matrícula</th><th>QRA</th><th>Policial</th><th>Tipo</th><th>Início</th><th>Término</th><th>Dias</th><th>Situação</th><th>Averbação</th><th>Dias no ciclo</th><th>Período do ciclo</th><th id="actionsHeader" hidden>Ações (admin)</th></tr></thead><tbody id="recordsBody"></tbody></table></div><p class="muted" id="recordsInfo"></p><div class="actions" id="recordsPagination"><button class="secondary" type="button" id="recordsPrev">Anterior</button><span id="recordsPageInfo" class="muted" style="align-self:center"></span><button class="secondary" type="button" id="recordsNext">Próxima</button></div></section>
 <section class="panel" id="reportPanel">
 <h2>Relatório gerencial</h2>
 <p class="help">Relatório por data de início. Inclui apenas registros carregados (até 1.000); afastamentos cancelados são excluídos. A averbação permanece indicativa.</p>
@@ -105,7 +105,7 @@
 <div class="audit-actions"><button type="button" class="secondary" id="auditReload">Consultar auditoria</button><button type="button" class="secondary" id="auditClear">Limpar filtros</button><button type="button" class="primary" id="auditCsv">Exportar CSV filtrado</button></div>
 <div class="table-wrap"><table><thead><tr><th>Data/hora</th><th>Operação</th><th>Registro</th><th>Usuário (ID)</th></tr></thead><tbody id="auditBody"></tbody></table></div><p class="muted" id="auditInfo"></p>
 <p class="audit-note">UPDATE mostra somente alterações comuns. CANCELAMENTO mostra apenas as atualizações que registraram cancelado_em. Não há filtro de exclusão física.</p>
-<p class="audit-note">A consulta recupera no máximo 1.000 eventos recentes do período escolhido. O CSV contém somente os eventos retornados e filtrados nesta tela; não é um backup integral do banco.</p>
+<p class="audit-note">A consulta de auditoria recupera no máximo 1.000 eventos recentes do período escolhido. O CSV contém somente os eventos retornados e filtrados nesta tela; não é um backup integral do banco.</p>
 </section>
 </section>
 </main>
@@ -121,6 +121,8 @@ let db = null, usuarioAtual = null, perfilAtual = null;
 let policiais = [], tipos = [], registros = [], averbacoes = [], erroView = null;
 let todosPoliciais = [], todosTipos = [], editPolicialId = null, editTipoId = null;
 let editandoId = null, auditoria = [];
+const TAMANHO_PAGINA=50, TAMANHO_LOTE=1000, MAX_REGISTROS=20000;
+let paginaRegistros=1, registrosTruncados=false, averbacoesTruncadas=false;
 const ehAdmin = () => perfilAtual?.perfil === "administrador" && perfilAtual?.ativo === true;
 const setMsg = (id, msg, erro=false) => { const e=$(id); e.textContent=msg; e.className='msg '+(erro?'error':'ok'); };
 function hojeISO(){const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');}
@@ -157,23 +159,38 @@ async function entrar(){
   finally{botao.disabled=!db?.auth;botao.textContent='Entrar';}
 }
 async function sair(){try{if(db)await db.auth.signOut();}catch(e){console.error(e);}finally{exibirLogin();setMsg('loginMessage','Sessão encerrada.');}}
+async function buscarEmLotes(criarConsulta, maximo=MAX_REGISTROS){
+  const resultado=[];
+  for(let inicio=0;inicio<maximo;inicio+=TAMANHO_LOTE){
+    const {data,error}=await criarConsulta().range(inicio,inicio+TAMANHO_LOTE-1);
+    if(error)throw error;
+    const lote=data||[];
+    resultado.push(...lote);
+    if(lote.length<TAMANHO_LOTE)return {dados:resultado,truncado:false};
+  }
+  return {dados:resultado,truncado:true};
+}
 async function carregarDados(){
   $('recordsInfo').textContent='Carregando registros...';
   try{
-    const [p,t,a,v]=await Promise.all([
+    const [p,t,a,v]=await Promise.allSettled([
       db.from('policiais').select('id,matricula,posto_graduacao,qra,nome_completo').eq('ativo',true).order('nome_completo'),
       db.from('tipos_afastamento').select('id,sigla,descricao,dias_fixos').eq('ativo',true).order('sigla'),
-      db.from('afastamentos').select('id,policial_id,tipo_id,data_inicio,data_fim,dias,observacoes,cancelado_em,policiais(matricula,qra,nome_completo),tipos_afastamento(sigla)').order('data_inicio',{ascending:false}).limit(1000),
-      db.from('vw_averbacoes').select('afastamento_id,policial_id,numero_ciclo,inicio_ciclo,fim_ciclo,total_dias,situacao_averbacao').limit(10000)
+      buscarEmLotes(()=>db.from('afastamentos').select('id,policial_id,tipo_id,data_inicio,data_fim,dias,observacoes,cancelado_em,policiais(matricula,qra,nome_completo),tipos_afastamento(sigla)').order('data_inicio',{ascending:false}).order('id',{ascending:false})),
+      buscarEmLotes(()=>db.from('vw_averbacoes').select('afastamento_id,policial_id,numero_ciclo,inicio_ciclo,fim_ciclo,total_dias,situacao_averbacao').order('afastamento_id',{ascending:true}))
     ]);
-    if(p.error||t.error||a.error)throw p.error||t.error||a.error;
-    policiais=p.data||[];tipos=t.data||[];registros=a.data||[];
-    erroView=v.error||null;
-    averbacoes=v.error?[]:(v.data||[]);
-    if(v.error)console.error('Falha ao consultar vw_averbacoes:',v.error);
-    $('avisoAverbacao').textContent=v.error
-      ? 'Não foi possível consultar a view de averbações: '+v.error.message
-      : 'Averbação indicativa: DM/LTSP por ciclo de 30 dias; a situação é do ciclo completo, não do evento individual. Os demais tipos são não aplicáveis.';
+    for(const r of [p,t,a])if(r.status==='rejected')throw r.reason;
+    if(p.value.error||t.value.error)throw p.value.error||t.value.error;
+    policiais=p.value.data||[];tipos=t.value.data||[];registros=a.value.dados;
+    registrosTruncados=a.value.truncado;
+    erroView=v.status==='rejected'?v.reason:null;
+    averbacoes=v.status==='fulfilled'?v.value.dados:[];
+    averbacoesTruncadas=v.status==='fulfilled'&&v.value.truncado;
+    paginaRegistros=1;
+    if(erroView)console.error('Falha ao consultar vw_averbacoes:',erroView);
+    $('avisoAverbacao').textContent=erroView
+      ? 'Não foi possível consultar a view de averbações: '+(erroView.message||String(erroView))
+      : 'Averbação indicativa: DM/LTSP por ciclo de 30 dias; a situação é do ciclo completo, não do evento individual. Os demais tipos são não aplicáveis.'+(averbacoesTruncadas?' Atenção: consulta de averbações atingiu o limite de 20.000 linhas.':'');
     preencherSeletores();preencherFiltroRelatorio();atualizarPainel();mostrarRegistros();atualizarRelatorio();
     if(ehAdmin()) { await carregarAuditoria(); await carregarCadastros(); await carregarUsuarios(); }
   }catch(error){console.error('Erro ao carregar dados:',error);$('recordsInfo').textContent='Erro ao consultar registros: '+erroAmigavel(error);}
@@ -368,7 +385,10 @@ function mostrarRegistros(){
   const tbody=$('recordsBody');tbody.replaceChildren();
   const mapa=new Map(averbacoes.map(a=>[String(a.afastamento_id),a]));
   const filtrados=registrosFiltrados();
-  filtrados.forEach(r=>{
+  const totalPaginas=Math.max(1,Math.ceil(filtrados.length/TAMANHO_PAGINA));
+  paginaRegistros=Math.min(Math.max(1,paginaRegistros),totalPaginas);
+  const pagina=filtrados.slice((paginaRegistros-1)*TAMANHO_PAGINA,paginaRegistros*TAMANHO_PAGINA);
+  pagina.forEach(r=>{
     const a=mapa.get(String(r.id)),tr=document.createElement('tr'),s=situacao(r);
     const valores=[r.policiais?.matricula||'',r.policiais?.qra||'',r.policiais?.nome_completo||'',r.tipos_afastamento?.sigla||'',formatarData(r.data_inicio),formatarData(r.data_fim),String(r.dias),s];
     valores.forEach((v,i)=>{
@@ -393,7 +413,10 @@ function mostrarRegistros(){
     }
     tbody.appendChild(tr);
   });
-  $('recordsInfo').textContent=`${filtrados.length} registro(s) exibido(s). Consulta de afastamentos limitada aos 1.000 mais recentes.`;
+  $('recordsInfo').textContent=`${filtrados.length} registro(s) encontrados; ${pagina.length} nesta página. ${registros.length} registros carregados.${registrosTruncados?' ATENÇÃO: limite de 20.000 registros atingido; filtros e exportações podem estar incompletos.':''}`;
+  $('recordsPageInfo').textContent=`Página ${paginaRegistros} de ${totalPaginas}`;
+  $('recordsPrev').disabled=paginaRegistros<=1;
+  $('recordsNext').disabled=paginaRegistros>=totalPaginas;
 }
 function exportarCsv(){
   const mapa=new Map(averbacoes.map(a=>[String(a.afastamento_id),a]));
@@ -422,7 +445,7 @@ function atualizarRelatorio(){
     [r.policiais?.matricula||'',r.policiais?.qra||'',r.policiais?.nome_completo||'',r.tipos_afastamento?.sigla||'',formatarData(r.data_inicio),formatarData(r.data_fim),r.dias,situacao(r)].forEach(v=>{const td=document.createElement('td');td.textContent=String(v);tr.appendChild(td);});
     tbody.appendChild(tr);
   }
-  $('reportInfo').textContent=`${dados.length} registro(s) no relatório. Base limitada aos 1.000 afastamentos mais recentes; filtro por data de início.`;
+  $('reportInfo').textContent=`${dados.length} registro(s) no relatório. ${registrosTruncados?'ATENÇÃO: limite de 20.000 registros atingido; relatório incompleto.':'Todos os registros carregados foram considerados.'} Filtro por data de início.`;
   $('reportPrintInfo').textContent=`14º BPM — Relatório de Afastamentos | Período: ${formatarData($('reportStart').value)||'sem início definido'} a ${formatarData($('reportEnd').value)||'sem fim definido'} | Gerado em ${formatarData(hojeISO())}`;
 }
 function validarPeriodoRelatorio(){
@@ -448,7 +471,9 @@ $('loginForm').addEventListener('submit',e=>{e.preventDefault();void entrar();})
 $('afastamentoForm').addEventListener('submit',e=>{e.preventDefault();void salvarAfastamento();});
 $('tipo').addEventListener('change',atualizarTipo);$('inicio').addEventListener('change',calcularTermino);$('dias').addEventListener('input',calcularTermino);
 $('clearButton').addEventListener('click',limparFormulario);$('cancelEditButton').addEventListener('click',limparFormulario);
-['filterText','filterPolicial','filterMes','filterAverbacao'].forEach(id=>$(id).addEventListener(id==='filterText'?'input':'change',mostrarRegistros));$('refresh').addEventListener('click',()=>{void carregarDados();});$('logout').addEventListener('click',()=>{void sair();});
+['filterText','filterPolicial','filterMes','filterAverbacao'].forEach(id=>$(id).addEventListener(id==='filterText'?'input':'change',()=>{paginaRegistros=1;mostrarRegistros();}));
+$('recordsPrev').addEventListener('click',()=>{paginaRegistros--;mostrarRegistros();});
+$('recordsNext').addEventListener('click',()=>{paginaRegistros++;mostrarRegistros();});$('refresh').addEventListener('click',()=>{void carregarDados();});$('logout').addEventListener('click',()=>{void sair();});
 
 // V5: gerenciamento de cadastros com RLS no servidor.
 async function carregarCadastros(){
