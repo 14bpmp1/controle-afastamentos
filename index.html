@@ -22,6 +22,13 @@
 
 /* V9: painel de alertas de retorno */
 .alerts-head{display:flex;align-items:end;justify-content:space-between;gap:14px;flex-wrap:wrap}.alerts-head select{min-width:180px}.alert-summary{display:flex;gap:9px;flex-wrap:wrap;margin:12px 0}.alert-summary span{background:#f1f5f9;padding:7px 11px;border-radius:8px;font-size:12px}.alert-empty{padding:14px;color:#64748b;font-size:13px}.alert-note{font-size:12px;color:#64748b;margin:10px 0 0}.alert-table td{white-space:normal}
+
+/* V10: historico individual */
+.history-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:15px 0}
+.history-summary .stat{margin:0;padding:13px}
+.history-summary .stat strong{font-size:22px}
+.history-note{font-size:12px;color:#64748b;margin-top:10px}
+@media(max-width:720px){.history-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 </head>
 <body>
@@ -50,9 +57,29 @@
 <div class="full"><label for="observacoes">Observações</label><textarea id="observacoes" rows="2" placeholder="Somente informações fictícias"></textarea></div>
 </div><div class="actions"><button class="primary" id="saveButton" type="submit">Salvar afastamento</button><button class="secondary" id="clearButton" type="button">Limpar</button><button class="secondary" id="cancelEditButton" type="button" hidden>Cancelar edição</button></div><div class="msg" id="formMessage" role="status"></div></form></section>
 <section class="panel"><div class="toolbar"><h2>Registros de afastamentos</h2><button class="secondary" id="exportCsv" type="button">Exportar CSV (Excel)</button></div><div class="filter-row"><div><label for="filterText">Pesquisar</label><input id="filterText" type="search" placeholder="Matrícula, QRA, nome ou tipo..."></div><div><label for="filterPolicial">Policial</label><select id="filterPolicial"><option value="">Todos</option></select></div><div><label for="filterMes">Mês de início</label><input id="filterMes" type="month"></div><div><label for="filterAverbacao">Averbação</label><select id="filterAverbacao"><option value="">Todas</option><option value="AVERBAR">Averbar</option><option value="NAO AVERBAR">Não averbar</option><option value="NAO APLICAVEL">Não aplicável</option></select></div></div><p class="summary" id="avisoAverbacao">Averbação calculada para DM e LTSP, conforme a view de testes.</p><div class="table-wrap" style="margin-top:15px"><table><thead><tr><th>Matrícula</th><th>QRA</th><th>Policial</th><th>Tipo</th><th>Início</th><th>Término</th><th>Dias</th><th>Situação</th><th>Averbação</th><th>Dias no ciclo</th><th>Período do ciclo</th><th id="actionsHeader" hidden>Ações (admin)</th></tr></thead><tbody id="recordsBody"></tbody></table></div><p class="muted" id="recordsInfo"></p><div class="actions" id="recordsPagination"><button class="secondary" type="button" id="recordsPrev">Anterior</button><span id="recordsPageInfo" class="muted" style="align-self:center"></span><button class="secondary" type="button" id="recordsNext">Próxima</button></div></section>
+
+<section class="panel" id="historyPanel">
+  <h2>Histórico individual do policial</h2>
+  <p class="help">Consulte afastamentos por policial e período. Inclui registros encerrados e, opcionalmente, cancelados. A averbação continua indicativa e pendente de revisão.</p>
+  <div class="filter-row">
+    <div><label for="historyPolicial">Policial</label><select id="historyPolicial"><option value="">Selecione um policial</option></select></div>
+    <div><label for="historyStart">De (início do afastamento)</label><input type="date" id="historyStart"></div>
+    <div><label for="historyEnd">Até (início do afastamento)</label><input type="date" id="historyEnd"></div>
+    <div><label for="historyCancelados">Incluir cancelados</label><select id="historyCancelados"><option value="nao">Não</option><option value="sim">Sim</option></select></div>
+  </div>
+  <div class="history-summary">
+    <div class="stat"><span>Afastamentos</span><strong id="historyCount">—</strong></div>
+    <div class="stat"><span>Dias acumulados*</span><strong id="historyDays">—</strong></div>
+    <div class="stat"><span>Tipos distintos</span><strong id="historyTypes">—</strong></div>
+    <div class="stat"><span>Cancelados no resultado</span><strong id="historyCanceled">—</strong></div>
+  </div>
+  <div class="actions"><button type="button" class="secondary" id="historyClear">Limpar filtros</button><button type="button" class="primary" id="historyCsv">Exportar histórico CSV</button></div>
+  <div class="table-wrap" style="margin-top:15px"><table><thead><tr><th>Tipo</th><th>Início</th><th>Término</th><th>Dias</th><th>Situação</th><th>Averbação indicativa</th><th>Início do ciclo</th><th>Fim do ciclo</th></tr></thead><tbody id="historyBody"></tbody></table></div>
+  <p class="history-note" id="historyInfo">Selecione um policial para consultar o histórico. *Dias acumulados são a soma das durações dos registros não cancelados no filtro, não dias únicos de calendário.</p>
+</section>
 <section class="panel" id="reportPanel">
 <h2>Relatório gerencial</h2>
-<p class="help">Relatório por data de início. Inclui apenas registros carregados (até 1.000); afastamentos cancelados são excluídos. A averbação permanece indicativa.</p>
+<p class="help">Relatório por data de início. Inclui apenas registros carregados (até 20.000); afastamentos cancelados são excluídos. A averbação permanece indicativa.</p>
 <div class="filter-row">
 <div><label for="reportStart">Início do período</label><input id="reportStart" type="date"></div>
 <div><label for="reportEnd">Fim do período</label><input id="reportEnd" type="date"></div>
@@ -200,7 +227,7 @@ async function carregarDados(){
     $('avisoAverbacao').textContent=erroView
       ? 'Não foi possível consultar a view de averbações: '+(erroView.message||String(erroView))
       : 'Averbação indicativa: DM/LTSP por ciclo de 30 dias; a situação é do ciclo completo, não do evento individual. Os demais tipos são não aplicáveis.'+(averbacoesTruncadas?' Atenção: consulta de averbações atingiu o limite de 20.000 linhas.':'');
-    preencherSeletores();preencherFiltroRelatorio();atualizarPainel();mostrarAlertas();mostrarRegistros();atualizarRelatorio();
+    preencherSeletores();preencherFiltroRelatorio();preencherHistorico();atualizarPainel();mostrarAlertas();mostrarRegistros();atualizarRelatorio();mostrarHistorico();
     if(ehAdmin()) { await carregarAuditoria(); await carregarCadastros(); await carregarUsuarios(); }
   }catch(error){console.error('Erro ao carregar dados:',error);$('recordsInfo').textContent='Erro ao consultar registros: '+erroAmigavel(error);}
 }
@@ -462,6 +489,65 @@ function exportarCsv(){
   const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
   const link=document.createElement('a');link.href=url;link.download='relatorio_afastamentos_'+hojeISO()+'.csv';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
+
+// V10: histórico individual; nenhuma gravação adicional no Supabase.
+function preencherHistorico(){
+  const seletor=$('historyPolicial'),anterior=seletor.value;
+  const porId=new Map();
+  for(const p of policiais)porId.set(String(p.id),`${p.matricula} · ${p.qra} · ${p.nome_completo}`);
+  for(const r of registros){
+    const id=String(r.policial_id);
+    if(!porId.has(id))porId.set(id,`${r.policiais?.matricula||'ID '+id} · ${r.policiais?.qra||''} · ${r.policiais?.nome_completo||'Cadastro inativo'}`);
+  }
+  seletor.replaceChildren(opcao('','Selecione um policial'));
+  [...porId.entries()].sort((a,b)=>a[1].localeCompare(b[1],'pt-BR')).forEach(([id,nome])=>seletor.appendChild(opcao(id,nome)));
+  if(porId.has(anterior))seletor.value=anterior;
+}
+function dadosHistorico(){
+  const id=$('historyPolicial').value,ini=$('historyStart').value,fim=$('historyEnd').value;
+  if(!id)return [];
+  return registros.filter(r=>String(r.policial_id)===id
+    && (!ini||r.data_inicio>=ini) && (!fim||r.data_inicio<=fim)
+    && ($('historyCancelados').value==='sim'||!r.cancelado_em))
+    .sort((a,b)=>b.data_inicio.localeCompare(a.data_inicio)||Number(b.id)-Number(a.id));
+}
+function mostrarHistorico(){
+  const tbody=$('historyBody'),info=$('historyInfo');tbody.replaceChildren();
+  const id=$('historyPolicial').value,ini=$('historyStart').value,fim=$('historyEnd').value;
+  const valido=!ini||!fim||ini<=fim;
+  const dados=valido?dadosHistorico():[];
+  $('historyCount').textContent=id&&valido?dados.length:'—';
+  $('historyDays').textContent=id&&valido?dados.filter(r=>!r.cancelado_em).reduce((s,r)=>s+Number(r.dias||0),0):'—';
+  $('historyTypes').textContent=id&&valido?new Set(dados.map(r=>r.tipo_id)).size:'—';
+  $('historyCanceled').textContent=id&&valido?dados.filter(r=>r.cancelado_em).length:'—';
+  const mapa=new Map(averbacoes.map(a=>[String(a.afastamento_id),a]));
+  for(const r of dados){
+    const a=!r.cancelado_em?mapa.get(String(r.id)):null,tr=document.createElement('tr');
+    [r.tipos_afastamento?.sigla||'',formatarData(r.data_inicio),formatarData(r.data_fim),r.dias,situacao(r),r.cancelado_em?'Não aplicável':erroView?'Indisponível':a?.situacao_averbacao||'Não aplicável',a?formatarData(a.inicio_ciclo):'—',a?formatarData(a.fim_ciclo):'—'].forEach(v=>{const td=document.createElement('td');td.textContent=String(v??'');tr.appendChild(td);});
+    tbody.appendChild(tr);
+  }
+  if(!dados.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=8;td.textContent=!valido?'A data inicial não pode ser posterior à final.':!id?'Selecione um policial para consultar o histórico.':'Nenhum registro encontrado para os filtros.';tr.appendChild(td);tbody.appendChild(tr);}
+  info.textContent=(id&&valido?`${dados.length} afastamento(s) encontrado(s). `:'')+'*Dias acumulados somam as durações dos registros não cancelados, sem descontar sobreposições de calendário. O período filtra pela data de início. '+(registrosTruncados?'ATENÇÃO: a base carregada atingiu 20.000 registros e o histórico pode estar incompleto. ':'')+'A averbação é indicativa e ainda será revisada.';
+  $('historyCsv').disabled=!id||!valido||!dados.length;
+}
+function exportarHistoricoCsv(){
+  if(!$('historyPolicial').value)return;
+  if($('historyStart').value&&$('historyEnd').value&&$('historyStart').value>$('historyEnd').value){alert('Confira o período informado.');return;}
+  const dados=dadosHistorico();if(!dados.length)return;
+  const mapa=new Map(averbacoes.map(a=>[String(a.afastamento_id),a]));
+  const linhas=[['Matrícula','QRA','Policial','Tipo','Início','Término','Dias','Situação','Averbação indicativa','Início ciclo','Fim ciclo']];
+  for(const r of dados){const a=!r.cancelado_em?mapa.get(String(r.id)):null;
+    linhas.push([r.policiais?.matricula||'',r.policiais?.qra||'',r.policiais?.nome_completo||'',r.tipos_afastamento?.sigla||'',formatarData(r.data_inicio),formatarData(r.data_fim),r.dias,situacao(r),r.cancelado_em?'Não aplicável':erroView?'Indisponível':a?.situacao_averbacao||'Não aplicável',a?formatarData(a.inicio_ciclo):'',a?formatarData(a.fim_ciclo):'']);
+  }
+  const cel=v=>{let t=String(v??'');if(/^[\s]*[=+@-]/.test(t))t="'"+t;return '"'+t.replace(/"/g,'""')+'"';};
+  const csv='\uFEFF'+linhas.map(l=>l.map(cel).join(';')).join('\r\n');
+  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+  const link=document.createElement('a');link.href=url;link.download='historico_policial_'+hojeISO()+'.csv';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+['historyPolicial','historyStart','historyEnd','historyCancelados'].forEach(id=>$(id).addEventListener('change',mostrarHistorico));
+$('historyClear').addEventListener('click',()=>{['historyPolicial','historyStart','historyEnd'].forEach(id=>$(id).value='');$('historyCancelados').value='nao';mostrarHistorico();});
+$('historyCsv').addEventListener('click',exportarHistoricoCsv);
+
 function dadosRelatorio(){
   const ini=$('reportStart').value,fim=$('reportEnd').value,pol=$('reportPolicial').value,tipo=$('reportTipo').value;
   return registros.filter(r=>!r.cancelado_em && (!ini||r.data_inicio>=ini) && (!fim||r.data_inicio<=fim) && (!pol||String(r.policial_id)===pol) && (!tipo||String(r.tipo_id)===tipo));
