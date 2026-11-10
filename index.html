@@ -99,12 +99,12 @@
 <div class="audit-controls">
 <div><label for="auditStart">De</label><input id="auditStart" type="date"></div>
 <div><label for="auditEnd">Até</label><input id="auditEnd" type="date"></div>
-<div><label for="auditOperation">Operação</label><select id="auditOperation"><option value="">Todas</option><option value="INSERT">INSERT (inclusão)</option><option value="UPDATE">UPDATE (todas as alterações, inclusive cancelamentos)</option><option value="CANCELAMENTO">CANCELAMENTO</option><option value="DELETE">DELETE (exclusão física, se houver)</option></select></div>
+<div><label for="auditOperation">Operação</label><select id="auditOperation"><option value="">Todas</option><option value="INSERT">INSERT (inclusão)</option><option value="UPDATE">UPDATE (alterações)</option><option value="CANCELAMENTO">CANCELAMENTO</option></select></div>
 <div><label for="auditSearch">Buscar registro ou usuário (ID)</label><input id="auditSearch" type="search" placeholder="ID do registro ou usuário"></div>
 </div>
 <div class="audit-actions"><button type="button" class="secondary" id="auditReload">Consultar auditoria</button><button type="button" class="secondary" id="auditClear">Limpar filtros</button><button type="button" class="primary" id="auditCsv">Exportar CSV filtrado</button></div>
 <div class="table-wrap"><table><thead><tr><th>Data/hora</th><th>Operação</th><th>Registro</th><th>Usuário (ID)</th></tr></thead><tbody id="auditBody"></tbody></table></div><p class="muted" id="auditInfo"></p>
-<p class="audit-note">UPDATE inclui cancelamentos. CANCELAMENTO mostra apenas os UPDATE que registraram cancelado_em. DELETE só apresenta exclusões físicas, que normalmente não ocorrem neste sistema.</p>
+<p class="audit-note">UPDATE mostra somente alterações comuns. CANCELAMENTO mostra apenas as atualizações que registraram cancelado_em. Não há filtro de exclusão física.</p>
 <p class="audit-note">A consulta recupera no máximo 1.000 eventos recentes do período escolhido. O CSV contém somente os eventos retornados e filtrados nesta tela; não é um backup integral do banco.</p>
 </section>
 </section>
@@ -301,14 +301,14 @@ function tipoEventoAuditoria(a){
 }
 function rotuloEventoAuditoria(a){
   const tipo=tipoEventoAuditoria(a);
-  return ({INSERT:'Inclusão (INSERT)',UPDATE:'Alteração (UPDATE)',CANCELAMENTO:'Cancelamento (UPDATE)',DELETE:'Exclusão física (DELETE)'})[tipo]||tipo;
+  return ({INSERT:'INSERT',UPDATE:'UPDATE',CANCELAMENTO:'CANCELAMENTO',DELETE:'DELETE'})[tipo]||tipo;
 }
 function auditoriaFiltrada(){
   const op=$('auditOperation').value.trim().toUpperCase();
   const termo=$('auditSearch').value.trim().toLowerCase();
   return auditoria.filter(a=>{
-    const original=operacaoOriginalAuditoria(a);
-    const correspondeOperacao=!op||(op==='CANCELAMENTO'?ehCancelamentoAuditoria(a):original===op);
+    const tipo=tipoEventoAuditoria(a);
+    const correspondeOperacao=!op||tipo===op;
     const correspondePesquisa=!termo||String(a.registro_id??'').toLowerCase().includes(termo)||String(a.usuario_id??'').toLowerCase().includes(termo);
     return correspondeOperacao&&correspondePesquisa;
   });
@@ -321,9 +321,9 @@ function mostrarAuditoria(){
     [new Date(a.data_hora).toLocaleString('pt-BR'),rotuloEventoAuditoria(a),String(a.registro_id??''),a.usuario_id||''].forEach(v=>celula(tr,v));
     tbody.appendChild(tr);
   }
-  const contagem={INSERT:0,UPDATE:0,DELETE:0};
-  auditoria.forEach(a=>{const op=operacaoOriginalAuditoria(a);if(Object.hasOwn(contagem,op))contagem[op]++;});
-  $('auditInfo').textContent=`${dados.length} evento(s) exibido(s) de ${auditoria.length} carregado(s). Operações normalizadas nesta consulta: INSERT ${contagem.INSERT}, UPDATE ${contagem.UPDATE}, DELETE ${contagem.DELETE}. Limite de 1.000 eventos por consulta.`;
+  const contagem={INSERT:0,UPDATE:0,CANCELAMENTO:0};
+  auditoria.forEach(a=>{const op=tipoEventoAuditoria(a);if(Object.hasOwn(contagem,op))contagem[op]++;});
+  $('auditInfo').textContent=`${dados.length} evento(s) exibido(s) de ${auditoria.length} carregado(s). INSERT ${contagem.INSERT}, UPDATE ${contagem.UPDATE}, CANCELAMENTO ${contagem.CANCELAMENTO}. Limite de 1.000 eventos por consulta.`;
 }
 function exportarAuditoriaCsv(){
   if(!ehAdmin())return;
