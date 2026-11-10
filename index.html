@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Controle de Afastamentos V9 | 14º BPM</title>
+<title>Controle de Afastamentos V11 | 14º BPM</title>
 <style>
 :root{font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;color:#172b45;background:#f3f6fa}*{box-sizing:border-box}[hidden]{display:none!important}body{margin:0}header{background:#142f53;color:white;padding:17px 22px}.head{max-width:1150px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px}h1{font-size:20px;margin:0}header small{color:#c8d6e9}main{max-width:1150px;margin:24px auto;padding:0 15px}.panel,.stat{background:#fff;border:1px solid #dbe3ef;border-radius:13px;padding:19px;margin-bottom:17px}.login{max-width:420px;margin:60px auto}h2{font-size:19px;margin:0 0 15px}label{display:block;font-weight:600;font-size:13px;margin:12px 0 5px}input,select,textarea{width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:10px;min-height:41px;font:inherit;background:white;color:#172b45}textarea{resize:vertical}button{font:inherit;cursor:pointer;border-radius:8px;padding:10px 15px}button:disabled{opacity:.55;cursor:not-allowed}.primary{background:#1d4ed8;color:#fff;border:1px solid #1d4ed8}.secondary{background:#fff;color:#172b45;border:1px solid #cbd5e1}.login .primary{width:100%;margin-top:18px}.msg{font-size:13px;margin-top:12px;white-space:pre-wrap;overflow-wrap:anywhere}.msg.error{color:#b91c1c}.msg.ok{color:#15803d}.muted{color:#64748b;font-size:12px}.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}.toolbar h2{margin:0 0 4px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.stat{margin:0 0 17px}.stat span{color:#64748b;font-size:12px}.stat strong{display:block;font-size:27px;margin-top:5px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 15px}.full{grid-column:1/-1}.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:11px 9px;border-bottom:1px solid #e2e8f0;white-space:nowrap}th{background:#f8fafc}.tag{display:inline-block;background:#dbeafe;color:#1d4ed8;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700}.tag.done{background:#e2e8f0;color:#475569}.tag.cancel{background:#fee2e2;color:#991b1b}.tag.soon{background:#ffedd5;color:#9a3412}.filter-row{display:flex;gap:12px;align-items:end;flex-wrap:wrap}.filter-row>div{flex:1;min-width:220px}@media(max-width:720px){.stats{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.full{grid-column:auto}.panel{padding:14px}h1{font-size:16px}.stat{padding:12px}}
 .tag.av{background:#fef3c7;color:#92400e}.tag.noav{background:#f1f5f9;color:#475569}.filter-row>div{min-width:170px}.summary{font-size:12px;color:#475569;margin:8px 0}.warning{color:#9a3412;font-size:12px}.danger{background:#b91c1c;color:white;border:1px solid #b91c1c}.mini{padding:5px 9px;font-size:12px}.admin-box{border-left:4px solid #1d4ed8}.subtle{background:#f8fafc}.edit-actions{display:flex;gap:5px}.help{font-size:12px;color:#64748b;margin:8px 0}
@@ -29,6 +29,18 @@
 .history-summary .stat strong{font-size:22px}
 .history-note{font-size:12px;color:#64748b;margin-top:10px}
 @media(max-width:720px){.history-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* V11: navegação rápida e acessível sem ocultar painéis */
+.v11-nav{position:sticky;top:0;z-index:20;background:#fff;border:1px solid #dbe3ef;border-radius:12px;padding:9px 10px;margin:0 0 18px;box-shadow:0 3px 12px #142f5312}
+.v11-nav-title{font-size:12px;color:#64748b;font-weight:700;margin:2px 5px 8px}
+.v11-nav-links{display:flex;gap:7px;flex-wrap:wrap}
+.v11-nav a{display:inline-flex;align-items:center;min-height:35px;padding:7px 10px;border:1px solid #dbe3ef;border-radius:8px;text-decoration:none;color:#17365d;background:#f8fafc;font-size:13px;font-weight:600}
+.v11-nav a:hover,.v11-nav a:focus-visible{background:#dbeafe;border-color:#93c5fd;outline:2px solid transparent}
+.v11-nav a[aria-current="location"]{background:#1d4ed8;color:white;border-color:#1d4ed8}
+.v11-nav [hidden]{display:none!important}
+.v11-jump,#alertsPanel,#cadastrosPanel,#usuariosPanel,#auditPanel{scroll-margin-top:120px}
+.v11-top{position:fixed;bottom:20px;right:18px;z-index:30;border:1px solid #cbd5e1;background:#142f53;color:#fff;box-shadow:0 3px 14px #142f5340}
+@media(max-width:720px){.v11-nav{top:0;padding:8px}.v11-nav-links{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}.v11-nav a{flex:0 0 auto;font-size:12px}.v11-top{bottom:12px;right:12px}}
+@media print{.v11-nav,.v11-top{display:none!important}}
 </style>
 </head>
 <body>
@@ -41,14 +53,28 @@
 </section>
 <section id="systemPage" hidden>
 <div class="toolbar"><div><h2>Painel de Afastamentos</h2><div class="muted" id="userInfo"></div></div><button class="secondary" id="refresh" type="button">Atualizar</button></div>
-<div class="stats"><div class="stat"><span>Policiais cadastrados</span><strong id="statPoliciais">—</strong></div><div class="stat"><span>Afastamentos ativos</span><strong id="statAtivos">—</strong></div><div class="stat"><span>Próximos do término (5 dias)</span><strong id="statProximos">—</strong></div><div class="stat"><span>Encerrados</span><strong id="statEncerrados">—</strong></div><div class="stat"><span>Ciclos para averbar</span><strong id="statAverbacoes">—</strong></div></div>
+<nav class="v11-nav" id="v11Nav" aria-label="Navegação entre módulos">
+  <div class="v11-nav-title">Acesso rápido aos módulos</div>
+  <div class="v11-nav-links">
+    <a href="#v11Dashboard">Painel</a>
+    <a href="#alertsPanel">Alertas</a>
+    <a href="#v11Cadastro">Novo afastamento</a>
+    <a href="#v11Registros">Registros</a>
+    <a href="#historyPanel">Histórico individual</a>
+    <a href="#reportPanel">Relatórios</a>
+    <a class="v11-admin-link" href="#cadastrosPanel" hidden>Cadastros</a>
+    <a class="v11-admin-link" href="#usuariosPanel" hidden>Usuários</a>
+    <a class="v11-admin-link" href="#auditPanel" hidden>Auditoria</a>
+  </div>
+</nav>
+<div class="stats v11-jump" id="v11Dashboard"><div class="stat"><span>Policiais cadastrados</span><strong id="statPoliciais">—</strong></div><div class="stat"><span>Afastamentos ativos</span><strong id="statAtivos">—</strong></div><div class="stat"><span>Próximos do término (5 dias)</span><strong id="statProximos">—</strong></div><div class="stat"><span>Encerrados</span><strong id="statEncerrados">—</strong></div><div class="stat"><span>Ciclos para averbar</span><strong id="statAverbacoes">—</strong></div></div>
 <section class="panel" id="alertsPanel" aria-labelledby="alertsTitle">
 <div class="alerts-head"><div><h2 id="alertsTitle">Alertas de retorno</h2><p class="help">Afastamentos em andamento, próximos da data de término. Atualização ao consultar o painel.</p></div><div><label for="alertsWindow">Período de alerta</label><select id="alertsWindow"><option value="1">Hoje e amanhã</option><option value="5" selected>Até 5 dias</option><option value="7">Até 7 dias</option><option value="15">Até 15 dias</option><option value="30">Até 30 dias</option></select></div></div>
 <div class="alert-summary" id="alertsSummary" aria-live="polite"></div>
 <div class="table-wrap"><table class="alert-table"><thead><tr><th>Matrícula</th><th>QRA</th><th>Nome</th><th>Tipo</th><th>Término</th><th>Dias restantes</th><th>Retorno previsto*</th></tr></thead><tbody id="alertsBody"></tbody></table></div>
 <p class="alert-note" id="alertsInfo">*Retorno previsto é o dia seguinte ao término, sem considerar fins de semana, feriados, prorrogações ou novas licenças. O painel não envia notificações automáticas.</p>
 </section>
-<section class="panel"><h2 id="formTitle">Novo afastamento</h2><p class="help" id="formHelp">Preencha os dados para cadastrar um afastamento fictício.</p><form id="afastamentoForm"><div class="grid">
+<section class="panel v11-jump" id="v11Cadastro"><h2 id="formTitle">Novo afastamento</h2><p class="help" id="formHelp">Preencha os dados para cadastrar um afastamento fictício.</p><form id="afastamentoForm"><div class="grid">
 <div class="full"><label for="policial">Policial</label><select id="policial" required><option value="">Selecione...</option></select></div>
 <div><label for="tipo">Tipo de afastamento</label><select id="tipo" required><option value="">Selecione...</option></select></div>
 <div><label for="dias">Quantidade de dias</label><input id="dias" type="number" min="1" max="3650" required></div>
@@ -56,9 +82,9 @@
 <div><label for="fim">Data de término</label><input id="fim" type="date" readonly required></div>
 <div class="full"><label for="observacoes">Observações</label><textarea id="observacoes" rows="2" placeholder="Somente informações fictícias"></textarea></div>
 </div><div class="actions"><button class="primary" id="saveButton" type="submit">Salvar afastamento</button><button class="secondary" id="clearButton" type="button">Limpar</button><button class="secondary" id="cancelEditButton" type="button" hidden>Cancelar edição</button></div><div class="msg" id="formMessage" role="status"></div></form></section>
-<section class="panel"><div class="toolbar"><h2>Registros de afastamentos</h2><button class="secondary" id="exportCsv" type="button">Exportar CSV (Excel)</button></div><div class="filter-row"><div><label for="filterText">Pesquisar</label><input id="filterText" type="search" placeholder="Matrícula, QRA, nome ou tipo..."></div><div><label for="filterPolicial">Policial</label><select id="filterPolicial"><option value="">Todos</option></select></div><div><label for="filterMes">Mês de início</label><input id="filterMes" type="month"></div><div><label for="filterAverbacao">Averbação</label><select id="filterAverbacao"><option value="">Todas</option><option value="AVERBAR">Averbar</option><option value="NAO AVERBAR">Não averbar</option><option value="NAO APLICAVEL">Não aplicável</option></select></div></div><p class="summary" id="avisoAverbacao">Averbação calculada para DM e LTSP, conforme a view de testes.</p><div class="table-wrap" style="margin-top:15px"><table><thead><tr><th>Matrícula</th><th>QRA</th><th>Policial</th><th>Tipo</th><th>Início</th><th>Término</th><th>Dias</th><th>Situação</th><th>Averbação</th><th>Dias no ciclo</th><th>Período do ciclo</th><th id="actionsHeader" hidden>Ações (admin)</th></tr></thead><tbody id="recordsBody"></tbody></table></div><p class="muted" id="recordsInfo"></p><div class="actions" id="recordsPagination"><button class="secondary" type="button" id="recordsPrev">Anterior</button><span id="recordsPageInfo" class="muted" style="align-self:center"></span><button class="secondary" type="button" id="recordsNext">Próxima</button></div></section>
+<section class="panel v11-jump" id="v11Registros"><div class="toolbar"><h2>Registros de afastamentos</h2><button class="secondary" id="exportCsv" type="button">Exportar CSV (Excel)</button></div><div class="filter-row"><div><label for="filterText">Pesquisar</label><input id="filterText" type="search" placeholder="Matrícula, QRA, nome ou tipo..."></div><div><label for="filterPolicial">Policial</label><select id="filterPolicial"><option value="">Todos</option></select></div><div><label for="filterMes">Mês de início</label><input id="filterMes" type="month"></div><div><label for="filterAverbacao">Averbação</label><select id="filterAverbacao"><option value="">Todas</option><option value="AVERBAR">Averbar</option><option value="NAO AVERBAR">Não averbar</option><option value="NAO APLICAVEL">Não aplicável</option></select></div></div><p class="summary" id="avisoAverbacao">Averbação calculada para DM e LTSP, conforme a view de testes.</p><div class="table-wrap" style="margin-top:15px"><table><thead><tr><th>Matrícula</th><th>QRA</th><th>Policial</th><th>Tipo</th><th>Início</th><th>Término</th><th>Dias</th><th>Situação</th><th>Averbação</th><th>Dias no ciclo</th><th>Período do ciclo</th><th id="actionsHeader" hidden>Ações (admin)</th></tr></thead><tbody id="recordsBody"></tbody></table></div><p class="muted" id="recordsInfo"></p><div class="actions" id="recordsPagination"><button class="secondary" type="button" id="recordsPrev">Anterior</button><span id="recordsPageInfo" class="muted" style="align-self:center"></span><button class="secondary" type="button" id="recordsNext">Próxima</button></div></section>
 
-<section class="panel" id="historyPanel">
+<section class="panel" id="historyPanel" class="v11-jump">
   <h2>Histórico individual do policial</h2>
   <p class="help">Consulte afastamentos por policial e período. Inclui registros encerrados e, opcionalmente, cancelados. A averbação continua indicativa e pendente de revisão.</p>
   <div class="filter-row">
@@ -77,7 +103,7 @@
   <div class="table-wrap" style="margin-top:15px"><table><thead><tr><th>Tipo</th><th>Início</th><th>Término</th><th>Dias</th><th>Situação</th><th>Averbação indicativa</th><th>Início do ciclo</th><th>Fim do ciclo</th></tr></thead><tbody id="historyBody"></tbody></table></div>
   <p class="history-note" id="historyInfo">Selecione um policial para consultar o histórico. *Dias acumulados são a soma das durações dos registros não cancelados no filtro, não dias únicos de calendário.</p>
 </section>
-<section class="panel" id="reportPanel">
+<section class="panel" id="reportPanel" class="v11-jump">
 <h2>Relatório gerencial</h2>
 <p class="help">Relatório por data de início. Inclui apenas registros carregados (até 20.000); afastamentos cancelados são excluídos. A averbação permanece indicativa.</p>
 <div class="filter-row">
@@ -145,6 +171,7 @@
 </section>
 </section>
 </main>
+<button type="button" class="v11-top" id="v11Top" hidden aria-label="Voltar ao início do painel">↑ Início</button>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
 'use strict';
@@ -177,6 +204,7 @@ async function verificarSessao(){
   usuarioAtual=data.user;perfilAtual=perfil;
   $('loginPage').hidden=true;$('systemPage').hidden=false;$('logout').hidden=false;
   $('userInfo').textContent=perfil.nome+' · '+perfil.perfil;
+  document.querySelectorAll('.v11-admin-link').forEach(link=>{link.hidden=!ehAdmin();});
   $('actionsHeader').hidden=!ehAdmin();
   $('auditPanel').hidden=!ehAdmin();
   $('cadastrosPanel').hidden=!ehAdmin();
@@ -744,6 +772,29 @@ async function carregarUsuarios(){
 }
 $('reloadUsers').addEventListener('click',()=>{void carregarUsuarios();});
 
+// V11: navegação somente na interface; não altera consultas, dados nem permissões.
+function configurarNavegacaoV11(){
+  const nav=$('v11Nav'),topo=$('v11Top');
+  nav.querySelectorAll('a[href^="#"]').forEach(link=>{
+    link.addEventListener('click',event=>{
+      const destino=document.getElementById(link.getAttribute('href').slice(1));
+      if(!destino || destino.hidden || link.hidden)return;
+      event.preventDefault();
+      nav.querySelectorAll('a').forEach(x=>x.removeAttribute('aria-current'));
+      link.setAttribute('aria-current','location');
+      destino.scrollIntoView({behavior:'smooth',block:'start'});
+      history.replaceState(null,'',link.getAttribute('href'));
+    });
+  });
+  topo.addEventListener('click',()=>{
+    $('systemPage').scrollIntoView({behavior:'smooth',block:'start'});
+    nav.querySelectorAll('a').forEach(x=>x.removeAttribute('aria-current'));
+  });
+  window.addEventListener('scroll',()=>{
+    topo.hidden=$('systemPage').hidden || window.scrollY<550;
+  },{passive:true});
+}
+configurarNavegacaoV11();
 async function iniciar(){
   const botao=$('loginButton');botao.disabled=true;
   try{
