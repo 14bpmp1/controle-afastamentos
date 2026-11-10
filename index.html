@@ -41,6 +41,8 @@
 .v11-top{position:fixed;bottom:20px;right:18px;z-index:30;border:1px solid #cbd5e1;background:#142f53;color:#fff;box-shadow:0 3px 14px #142f5340}
 @media(max-width:720px){.v11-nav{top:0;padding:8px}.v11-nav-links{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}.v11-nav a{flex:0 0 auto;font-size:12px}.v11-top{bottom:12px;right:12px}}
 @media print{.v11-nav,.v11-top{display:none!important}}
+/* V12: conferência somente leitura */
+.check-summary{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}.check-summary span{background:#f1f5f9;border-radius:8px;padding:9px 12px;font-size:13px}.check-table td{white-space:normal}.check-note{color:#64748b;font-size:12px;margin-top:12px}
 </style>
 </head>
 <body>
@@ -65,6 +67,7 @@
     <a class="v11-admin-link" href="#cadastrosPanel" hidden>Cadastros</a>
     <a class="v11-admin-link" href="#usuariosPanel" hidden>Usuários</a>
     <a class="v11-admin-link" href="#auditPanel" hidden>Auditoria</a>
+    <a class="v11-admin-link" href="#integridadePanel" hidden>Conferência</a>
   </div>
 </nav>
 <div class="stats v11-jump" id="v11Dashboard"><div class="stat"><span>Policiais cadastrados</span><strong id="statPoliciais">—</strong></div><div class="stat"><span>Afastamentos ativos</span><strong id="statAtivos">—</strong></div><div class="stat"><span>Próximos do término (5 dias)</span><strong id="statProximos">—</strong></div><div class="stat"><span>Encerrados</span><strong id="statEncerrados">—</strong></div><div class="stat"><span>Ciclos para averbar</span><strong id="statAverbacoes">—</strong></div></div>
@@ -155,6 +158,14 @@
   <div class="table-wrap"><table><thead><tr><th>Data/hora</th><th>Conta (ID)</th><th>Alterado por (ID)</th><th>Antes</th><th>Depois</th></tr></thead><tbody id="usersAuditBody"></tbody></table></div>
   <p class="muted" id="usersAuditMessage"></p>
 </section>
+<section class="panel admin-box" id="integridadePanel" hidden>
+<h2>Conferência e integridade dos dados (administradores)</h2>
+<p class="help">Verificação somente leitura dos afastamentos carregados. Nenhum registro será alterado. A averbação não é avaliada nesta conferência.</p>
+<div class="actions"><button class="secondary" type="button" id="integridadeVerificar">Reverificar</button><button class="primary" type="button" id="integridadeCsv">Exportar inconsistências CSV</button></div>
+<div class="check-summary" id="integridadeResumo" aria-live="polite"></div>
+<div class="table-wrap"><table class="check-table"><thead><tr><th>ID</th><th>Matrícula</th><th>Tipo</th><th>Início</th><th>Término</th><th>Problema identificado</th></tr></thead><tbody id="integridadeBody"></tbody></table></div>
+<p class="check-note" id="integridadeInfo">Aguardando verificação.</p>
+</section>
 <section class="panel admin-box" id="auditPanel" hidden>
 <h2>Auditoria de afastamentos (administradores)</h2>
 <p class="help">Consulte e exporte eventos de inclusão, alteração e cancelamento. Os registros da auditoria não são editáveis nesta tela.</p>
@@ -209,6 +220,7 @@ async function verificarSessao(){
   $('auditPanel').hidden=!ehAdmin();
   $('cadastrosPanel').hidden=!ehAdmin();
   $('usuariosPanel').hidden=!ehAdmin();
+  $('integridadePanel').hidden=!ehAdmin();
   await carregarDados();
 }
 async function entrar(){
@@ -256,7 +268,7 @@ async function carregarDados(){
       ? 'Não foi possível consultar a view de averbações: '+(erroView.message||String(erroView))
       : 'Averbação indicativa: DM/LTSP por ciclo de 30 dias; a situação é do ciclo completo, não do evento individual. Os demais tipos são não aplicáveis.'+(averbacoesTruncadas?' Atenção: consulta de averbações atingiu o limite de 20.000 linhas.':'');
     preencherSeletores();preencherFiltroRelatorio();preencherHistorico();atualizarPainel();mostrarAlertas();mostrarRegistros();atualizarRelatorio();mostrarHistorico();
-    if(ehAdmin()) { await carregarAuditoria(); await carregarCadastros(); await carregarUsuarios(); }
+    if(ehAdmin()) { await carregarAuditoria(); await carregarCadastros(); await carregarUsuarios(); verificarIntegridade(); }
   }catch(error){console.error('Erro ao carregar dados:',error);$('recordsInfo').textContent='Erro ao consultar registros: '+erroAmigavel(error);}
 }
 function preencherSeletores(){
@@ -771,6 +783,51 @@ async function carregarUsuarios(){
   $('usersAuditMessage').textContent=`${(log.data||[]).length} alteração(ões) de perfil exibida(s).`;
 }
 $('reloadUsers').addEventListener('click',()=>{void carregarUsuarios();});
+
+// V12: verificação somente leitura. Não consulta nem altera a regra de averbação.
+let inconsistenciasV12=[];
+function verificarIntegridade(){
+  if(!ehAdmin())return;
+  const issues=[];
+  const porTipo=new Map([...tipos,...todosTipos].map(t=>[String(t.id),t]));
+  const porPolicial=new Map([...policiais,...todosPoliciais].map(p=>[String(p.id),p]));
+  for(const r of registros){
+    if(r.cancelado_em)continue; // cancelados são históricos e não são avaliados
+    const problemas=[];
+    const inicio=String(r.data_inicio||''),fim=String(r.data_fim||'');
+    const valido=d=>/^\d{4}-\d{2}-\d{2}$/.test(d)&&!Number.isNaN(Date.parse(d+'T00:00:00Z'))&&new Date(d+'T00:00:00Z').toISOString().slice(0,10)===d;
+    if(!valido(inicio)||!valido(fim))problemas.push('Data de início ou término inválida');
+    else if(fim<inicio)problemas.push('Término anterior ao início');
+    else{
+      const esperado=Math.round((Date.parse(fim+'T00:00:00Z')-Date.parse(inicio+'T00:00:00Z'))/86400000)+1;
+      if(Number(r.dias)!==esperado)problemas.push(`Duração divergente: ${r.dias} no banco, ${esperado} calculados`);
+    }
+    const t=porTipo.get(String(r.tipo_id));
+    if(!t)problemas.push('Tipo não localizado nos cadastros carregados');
+    else if(t.dias_fixos!==null&&t.dias_fixos!==undefined&&Number(t.dias_fixos)!==Number(r.dias))problemas.push(`Tipo com duração fixa de ${t.dias_fixos} dia(s), registro com ${r.dias}`);
+    if(!porPolicial.has(String(r.policial_id)))problemas.push('Policial não localizado nos cadastros carregados');
+    for(const problema of problemas)issues.push({id:r.id,matricula:r.policiais?.matricula||'',tipo:r.tipos_afastamento?.sigla||'',inicio,fim,problema});
+  }
+  inconsistenciasV12=issues;
+  const resumo=$('integridadeResumo');resumo.replaceChildren();
+  for(const valor of [`${registros.filter(r=>!r.cancelado_em).length} afastamento(s) verificado(s)`,`${issues.length} ocorrência(s)`,`${new Set(issues.map(i=>i.id)).size} registro(s) com alerta`]){
+    const el=document.createElement('span');el.textContent=valor;resumo.appendChild(el);
+  }
+  const corpo=$('integridadeBody');corpo.replaceChildren();
+  if(!issues.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=6;td.textContent='Nenhuma inconsistência identificada nas verificações disponíveis.';tr.appendChild(td);corpo.appendChild(tr);}
+  for(const item of issues){const tr=document.createElement('tr');[item.id,item.matricula,item.tipo,formatarData(item.inicio),formatarData(item.fim),item.problema].forEach(v=>celula(tr,v));corpo.appendChild(tr);}
+  $('integridadeInfo').textContent='Verificação dos registros não cancelados carregados no navegador.'+(registrosTruncados?' ATENÇÃO: o limite de 20.000 registros foi atingido; a conferência não cobre toda a base.':'')+' Não detecta todas as inconsistências possíveis e não substitui validações do banco. Cadastros desativados são considerados quando disponíveis.';
+}
+function exportarIntegridadeCsv(){
+  if(!ehAdmin())return;
+  const linhas=[['ID','Matrícula','Tipo','Início','Término','Inconsistência'],...inconsistenciasV12.map(x=>[x.id,x.matricula,x.tipo,formatarData(x.inicio),formatarData(x.fim),x.problema])];
+  const esc=v=>{let t=String(v??'');if(/^[\s]*[=+@-]/.test(t))t="'"+t;return '"'+t.replace(/"/g,'""')+'"';};
+  const csv='\uFEFF'+linhas.map(l=>l.map(esc).join(';')).join('\r\n');
+  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+  const link=document.createElement('a');link.href=url;link.download='conferencia_afastamentos_'+hojeISO()+'.csv';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+$('integridadeVerificar').addEventListener('click',verificarIntegridade);
+$('integridadeCsv').addEventListener('click',exportarIntegridadeCsv);
 
 // V11: navegação somente na interface; não altera consultas, dados nem permissões.
 function configurarNavegacaoV11(){
