@@ -118,7 +118,7 @@
 </section>
 <section class="panel" id="reportPanel" class="v11-jump">
 <h2>Relatório gerencial</h2>
-<p class="help">Relatório por data de início, consultado diretamente no Supabase. Exibe 100 registros por página; cancelados são excluídos. Os totais de policiais e dias correspondem à página atual. CSV e impressão incluem somente a página exibida. Averbação permanece indicativa.</p>
+<p class="help">Relatório por data de início, consultado diretamente no Supabase. Exibe 100 registros por página; cancelados são excluídos. Os totais de policiais e dias correspondem à página atual. O CSV da página e a impressão abrangem apenas a página exibida; o novo CSV completo percorre todas as páginas do filtro. Averbação permanece indicativa.</p>
 <div class="filter-row">
 <div><label for="reportStart">Início do período</label><input id="reportStart" type="date"></div>
 <div><label for="reportEnd">Fim do período</label><input id="reportEnd" type="date"></div>
@@ -130,7 +130,7 @@
 <div class="report-stat"><span>Policiais distintos na página</span><strong id="reportPeople">0</strong></div>
 <div class="report-stat"><span>Dias dos registros na página</span><strong id="reportDays">0</strong></div>
 </div>
-<div class="actions"><button type="button" class="secondary" id="reportClear">Limpar filtros</button><button type="button" class="primary" id="reportPrint">Imprimir / Salvar PDF</button><button type="button" class="secondary" id="reportCsv">Exportar relatório CSV</button></div>
+<div class="actions"><button type="button" class="secondary" id="reportClear">Limpar filtros</button><button type="button" class="primary" id="reportPrint">Imprimir / Salvar PDF</button><button type="button" class="secondary" id="reportCsv">Exportar página CSV</button><button type="button" class="primary" id="reportCsvFull">Exportar relatório completo CSV</button></div><button type="button" class="secondary" id="reportCancelExport" hidden>Cancelar exportação</button><p class="muted" id="reportExportStatus" role="status" aria-live="polite"></p>
 <p class="report-print-title" id="reportPrintInfo"></p>
 <div class="table-wrap" style="margin-top:15px"><table><thead><tr><th>Matrícula</th><th>QRA</th><th>Nome</th><th>Tipo</th><th>Início</th><th>Término</th><th>Dias</th><th>Situação</th></tr></thead><tbody id="reportBody"></tbody></table></div>
 <div class="audit-actions"><button type="button" class="secondary" id="reportPrev">← Página anterior</button><span id="reportPageLabel" role="status" style="align-self:center">Página 1</span><button type="button" class="secondary" id="reportNext">Próxima página →</button></div><p class="muted" id="reportInfo"></p>
@@ -730,7 +730,7 @@ async function consultarRelatorio(){
     console.error('Erro ao consultar relatório:',error);
     registrosRelatorio=[];totalRelatorio=0;relatorioCarregando=false;mostrarRelatorio();
     $('reportInfo').textContent='Falha na consulta do relatório: '+erroAmigavel(error);
-    $('reportCsv').disabled=true;$('reportPrint').disabled=true;
+    $('reportCsv').disabled=true;$('reportPrint').disabled=true;$('reportCsvFull').disabled=true;
   }
 }
 function mostrarRelatorio(){
@@ -748,8 +748,9 @@ function mostrarRelatorio(){
   $('reportPrev').disabled=relatorioCarregando||paginaRelatorio<=1;
   $('reportNext').disabled=relatorioCarregando||paginaRelatorio>=paginas;
   $('reportCsv').disabled=relatorioCarregando||!dados.length;
+  $('reportCsvFull').disabled=relatorioCarregando||exportacaoRelatorioEmAndamento||!totalRelatorio;
   $('reportPrint').disabled=relatorioCarregando||!dados.length;
-  $('reportInfo').textContent=`${totalRelatorio} afastamento(s) no banco com estes filtros. Exibindo ${dados.length} registro(s) na página ${paginaRelatorio}. Policiais distintos e dias somados apenas nesta página. CSV e impressão incluem somente esta página.`;
+  $('reportInfo').textContent=`${totalRelatorio} afastamento(s) no banco com estes filtros. Exibindo ${dados.length} registro(s) na página ${paginaRelatorio}. Policiais distintos e dias somados apenas nesta página. CSV da página e impressão incluem somente esta página; use Exportar relatório completo CSV para obter todos os registros filtrados.`;
   $('reportPrintInfo').textContent=`14º BPM — Relatório de Afastamentos | Período: ${formatarData($('reportStart').value)||'sem início definido'} a ${formatarData($('reportEnd').value)||'sem fim definido'} | Página ${paginaRelatorio} | Gerado em ${formatarData(hojeISO())}`;
 }
 function exportarRelatorioCsv(){
@@ -767,6 +768,83 @@ $('reportPrev').addEventListener('click',()=>{if(paginaRelatorio>1){paginaRelato
 $('reportNext').addEventListener('click',()=>{if(paginaRelatorio*RELATORIO_POR_PAGINA<totalRelatorio){paginaRelatorio++;void consultarRelatorio();}});
 $('reportPrint').addEventListener('click',()=>{if(!relatorioCarregando&&registrosRelatorio.length&&validarPeriodoRelatorio())window.print();});
 $('reportCsv').addEventListener('click',exportarRelatorioCsv);
+// V18: exportação completa em lotes; nenhuma linha parcial é baixada se ocorrer erro.
+let exportacaoRelatorioEmAndamento=false;
+let exportacaoRelatorioCancelada=false;
+const LOTE_EXPORTACAO_RELATORIO=500;
+function cancelarExportacaoRelatorio(){
+  if(exportacaoRelatorioEmAndamento){exportacaoRelatorioCancelada=true;$('reportExportStatus').textContent='Cancelando exportação após a consulta em andamento...';}
+}
+function filtrosRelatorioAtuais(){
+  return {ini:$('reportStart').value,fim:$('reportEnd').value,policial:$('reportPolicial').value,tipo:$('reportTipo').value};
+}
+function filtrosRelatorioIguais(a,b){return JSON.stringify(a)===JSON.stringify(b);}
+function celulaCsvSegura(v){
+  let t=String(v??'');
+  if(/^[\s\uFEFF\u200B]*[=+@-]/.test(t))t="'"+t;
+  return '"'+t.replace(/"/g,'""')+'"';
+}
+function linhaCsvRelatorio(r){
+  return [r.policiais?.matricula||'',r.policiais?.qra||'',r.policiais?.nome_completo||'',r.tipos_afastamento?.sigla||'',formatarData(r.data_inicio),formatarData(r.data_fim),r.dias,situacao(r)].map(celulaCsvSegura).join(';');
+}
+async function exportarRelatorioCompletoCsv(){
+  if(exportacaoRelatorioEmAndamento||relatorioCarregando||!validarPeriodoRelatorio()||!totalRelatorio)return;
+  const filtros=filtrosRelatorioAtuais();
+  exportacaoRelatorioEmAndamento=true;exportacaoRelatorioCancelada=false;
+  const botao=$('reportCsvFull'),cancelar=$('reportCancelExport');
+  botao.disabled=true;cancelar.hidden=false;
+  const status=$('reportExportStatus');
+  const linhas=[['Matrícula','QRA','Policial','Tipo','Início','Término','Dias','Situação'].map(celulaCsvSegura).join(';')];
+  let carregados=0,ultimoId=null,ultimaData=null;
+  try{
+    // Cursor composto por data_inicio + id evita o limite de offset do PostgREST em históricos extensos.
+    // Usa a mesma ordenação do relatório na tela: data_inicio DESC, id DESC.
+    while(true){
+      if(exportacaoRelatorioCancelada)throw new Error('Exportação cancelada. Nenhum arquivo parcial foi gerado.');
+      if(!filtrosRelatorioIguais(filtros,filtrosRelatorioAtuais()))throw new Error('Os filtros foram alterados. Reinicie a exportação.');
+      status.textContent=`Preparando CSV completo... ${carregados} registro(s) recebidos.`;
+      let q=db.from('afastamentos')
+        .select('id,policial_id,tipo_id,data_inicio,data_fim,dias,cancelado_em,policiais(matricula,qra,nome_completo),tipos_afastamento(sigla)')
+        .is('cancelado_em',null)
+        .order('data_inicio',{ascending:false}).order('id',{ascending:false})
+        .limit(LOTE_EXPORTACAO_RELATORIO);
+      if(filtros.ini)q=q.gte('data_inicio',filtros.ini);
+      if(filtros.fim)q=q.lte('data_inicio',filtros.fim);
+      if(filtros.policial)q=q.eq('policial_id',filtros.policial);
+      if(filtros.tipo)q=q.eq('tipo_id',filtros.tipo);
+      if(ultimaData!==null){
+        // Chave de paginação: datas anteriores, ou mesma data e ID inferior.
+        q=q.or(`data_inicio.lt.${ultimaData},and(data_inicio.eq.${ultimaData},id.lt.${ultimoId})`);
+      }
+      const {data,error}=await q;
+      if(error)throw error;
+      if(exportacaoRelatorioCancelada)throw new Error('Exportação cancelada. Nenhum arquivo parcial foi gerado.');
+      const lote=data||[];
+      if(!lote.length)break;
+      for(const r of lote)linhas.push(linhaCsvRelatorio(r));
+      carregados+=lote.length;
+      const ultimo=lote[lote.length-1];ultimaData=ultimo.data_inicio;ultimoId=ultimo.id;
+      if(lote.length<LOTE_EXPORTACAO_RELATORIO)break;
+    }
+    if(!filtrosRelatorioIguais(filtros,filtrosRelatorioAtuais()))throw new Error('Os filtros foram alterados. Reinicie a exportação.');
+    if(!carregados)throw new Error('Nenhum registro encontrado para exportar.');
+    const csv='\uFEFF'+linhas.join('\r\n');
+    const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+    const link=document.createElement('a');link.href=url;
+    link.download='relatorio_gerencial_completo_'+hojeISO()+'.csv';
+    document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),15000);
+    status.textContent=`Exportação concluída: ${carregados} afastamento(s) no arquivo CSV. A base pode ter mudado durante a consulta.`;
+  }catch(error){
+    console.error('Falha na exportação completa:',error);
+    status.textContent='Não foi possível concluir: '+erroAmigavel(error)+' Nenhum CSV parcial foi baixado.';
+  }finally{
+    exportacaoRelatorioEmAndamento=false;cancelar.hidden=true;
+    botao.disabled=relatorioCarregando||!totalRelatorio;
+  }
+}
+$('reportCsvFull').addEventListener('click',()=>{void exportarRelatorioCompletoCsv();});
+$('reportCancelExport').addEventListener('click',cancelarExportacaoRelatorio);
+
 $('exportCsv').addEventListener('click',exportarCsv);
 $('loginForm').addEventListener('submit',e=>{e.preventDefault();void entrar();});
 $('afastamentoForm').addEventListener('submit',e=>{e.preventDefault();void salvarAfastamento();});
