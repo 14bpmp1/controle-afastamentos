@@ -279,7 +279,16 @@ async function carregarAuditoria(){
   mostrarAuditoria();
 }
 function operacaoOriginalAuditoria(a){
-  return String(a.operacao ?? '').trim().toUpperCase();
+  // O banco pode registrar operacoes em portugues (INCLUSAO/ALTERACAO)
+  // ou em ingles (INSERT/UPDATE/DELETE). Normalizamos para filtrar.
+  const valor=String(a.operacao ?? '').trim().normalize('NFD')
+    .replace(/[\u0300-\u036f]/g,'').toUpperCase();
+  const equivalencias={
+    INCLUSAO:'INSERT', INCLUSAO_DE_REGISTRO:'INSERT', INSERCAO:'INSERT',
+    ALTERACAO:'UPDATE', ATUALIZACAO:'UPDATE', EDICAO:'UPDATE',
+    EXCLUSAO:'DELETE', REMOCAO:'DELETE'
+  };
+  return equivalencias[valor] || valor;
 }
 function ehCancelamentoAuditoria(a){
   if(operacaoOriginalAuditoria(a)!=='UPDATE')return false;
@@ -314,7 +323,7 @@ function mostrarAuditoria(){
   }
   const contagem={INSERT:0,UPDATE:0,DELETE:0};
   auditoria.forEach(a=>{const op=operacaoOriginalAuditoria(a);if(Object.hasOwn(contagem,op))contagem[op]++;});
-  $('auditInfo').textContent=`${dados.length} evento(s) exibido(s) de ${auditoria.length} carregado(s). Operações disponíveis nesta consulta: INSERT ${contagem.INSERT}, UPDATE ${contagem.UPDATE}, DELETE ${contagem.DELETE}. Limite de 1.000 eventos por consulta.`;
+  $('auditInfo').textContent=`${dados.length} evento(s) exibido(s) de ${auditoria.length} carregado(s). Operações normalizadas nesta consulta: INSERT ${contagem.INSERT}, UPDATE ${contagem.UPDATE}, DELETE ${contagem.DELETE}. Limite de 1.000 eventos por consulta.`;
 }
 function exportarAuditoriaCsv(){
   if(!ehAdmin())return;
