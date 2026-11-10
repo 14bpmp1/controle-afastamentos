@@ -23,6 +23,8 @@
 /* V9: painel de alertas de retorno */
 .alerts-head{display:flex;align-items:end;justify-content:space-between;gap:14px;flex-wrap:wrap}.alerts-head select{min-width:180px}.alert-summary{display:flex;gap:9px;flex-wrap:wrap;margin:12px 0}.alert-summary span{background:#f1f5f9;padding:7px 11px;border-radius:8px;font-size:12px}.alert-empty{padding:14px;color:#64748b;font-size:13px}.alert-note{font-size:12px;color:#64748b;margin:10px 0 0}.alert-table td{white-space:normal}
 
+/* V14: agenda de afastamentos programados */
+.agenda-summary{display:flex;gap:9px;flex-wrap:wrap;margin:12px 0}.agenda-summary span{background:#eef2ff;padding:7px 11px;border-radius:8px;font-size:12px}
 /* V10: historico individual */
 .history-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:15px 0}
 .history-summary .stat{margin:0;padding:13px}
@@ -58,6 +60,7 @@
   <div class="v11-nav-links">
     <a href="#v11Dashboard">Painel</a>
     <a href="#alertsPanel">Alertas</a>
+    <a href="#agendaPanel">Agenda</a>
     <a href="#v11Cadastro">Novo afastamento</a>
     <a href="#v11Registros">Registros</a>
     <a href="#historyPanel">Histórico individual</a>
@@ -74,6 +77,14 @@
 <div class="actions"><button type="button" class="secondary" id="alertsCsv">Exportar alertas CSV (Excel)</button></div>
 <div class="table-wrap"><table class="alert-table"><thead><tr><th>Matrícula</th><th>QRA</th><th>Nome</th><th>Tipo</th><th>Término</th><th>Dias restantes</th><th>Retorno previsto*</th></tr></thead><tbody id="alertsBody"></tbody></table></div>
 <p class="alert-note" id="alertsInfo">*Retorno previsto é o dia seguinte ao término, sem considerar fins de semana, feriados, prorrogações ou novas licenças. O painel não envia notificações automáticas.</p>
+</section>
+<section class="panel v11-jump" id="agendaPanel" aria-labelledby="agendaTitle">
+<div class="alerts-head"><div><h2 id="agendaTitle">Agenda de afastamentos programados</h2><p class="help">Afastamentos ainda não iniciados, com início previsto dentro do período selecionado. Registros cancelados não são exibidos.</p></div>
+<div><label for="agendaWindow">Próximos</label><select id="agendaWindow"><option value="7">7 dias</option><option value="15">15 dias</option><option value="30" selected>30 dias</option><option value="60">60 dias</option><option value="90">90 dias</option></select></div></div>
+<div class="agenda-summary" id="agendaSummary" aria-live="polite"></div>
+<div class="actions"><button type="button" class="secondary" id="agendaCsv">Exportar agenda CSV (Excel)</button></div>
+<div class="table-wrap"><table><thead><tr><th>Matrícula</th><th>QRA</th><th>Nome</th><th>Tipo</th><th>Início</th><th>Término</th><th>Dias</th><th>Faltam para iniciar</th></tr></thead><tbody id="agendaBody"></tbody></table></div>
+<p class="alert-note" id="agendaInfo">Agenda calculada com base nos registros carregados. Não representa convocação ou confirmação de afastamento.</p>
 </section>
 <section class="panel v11-jump" id="v11Cadastro"><h2 id="formTitle">Novo afastamento</h2><p class="help" id="formHelp">Preencha os dados para cadastrar um afastamento fictício.</p><form id="afastamentoForm"><div class="grid">
 <div class="full"><label for="policial">Policial</label><select id="policial" required><option value="">Selecione...</option></select></div>
@@ -256,7 +267,7 @@ async function carregarDados(){
     $('avisoAverbacao').textContent=erroView
       ? 'Não foi possível consultar a view de averbações: '+(erroView.message||String(erroView))
       : 'Averbação indicativa: DM/LTSP por ciclo de 30 dias; a situação é do ciclo completo, não do evento individual. Os demais tipos são não aplicáveis.'+(averbacoesTruncadas?' Atenção: consulta de averbações atingiu o limite de 20.000 linhas.':'');
-    preencherSeletores();preencherFiltroRelatorio();preencherHistorico();atualizarPainel();mostrarAlertas();mostrarRegistros();atualizarRelatorio();mostrarHistorico();
+    preencherSeletores();preencherFiltroRelatorio();preencherHistorico();atualizarPainel();mostrarAlertas();mostrarAgenda();mostrarRegistros();atualizarRelatorio();mostrarHistorico();
     if(ehAdmin()) { await carregarAuditoria(); await carregarCadastros(); await carregarUsuarios(); }
   }catch(error){console.error('Erro ao carregar dados:',error);$('recordsInfo').textContent='Erro ao consultar registros: '+erroAmigavel(error);}
 }
@@ -473,6 +484,42 @@ function mostrarAlertas(){
   info.textContent='*Retorno previsto é o dia seguinte ao término, sem considerar fins de semana, feriados, prorrogações ou novas licenças. O painel não envia notificações automáticas.'+(registrosTruncados?' Atenção: a consulta atingiu o limite de 20.000 afastamentos; os alertas podem estar incompletos.':'');
 }
 $('alertsWindow').addEventListener('change',mostrarAlertas);
+// V14: agenda de afastamentos futuros; leitura somente dos dados já carregados.
+function agendaDoPeriodo(){
+  const h=hojeISO(),dias=Number($('agendaWindow').value)||30,limite=somarDias(h,dias);
+  return registros.filter(r=>!r.cancelado_em && r.data_inicio>h && r.data_inicio<=limite)
+    .sort((a,b)=>a.data_inicio.localeCompare(b.data_inicio)||String(a.policiais?.matricula||'').localeCompare(String(b.policiais?.matricula||'')));
+}
+function mostrarAgenda(){
+  const tbody=$('agendaBody'),resumo=$('agendaSummary');tbody.replaceChildren();resumo.replaceChildren();
+  const dados=agendaDoPeriodo(),h=hojeISO(),pessoas=new Set(dados.map(r=>String(r.policial_id)));
+  for(const msg of [`${dados.length} afastamento(s) programado(s)`,`${pessoas.size} policial(is)`, `Próximos ${$('agendaWindow').value} dias`]){
+    const span=document.createElement('span');span.textContent=msg;resumo.appendChild(span);
+  }
+  if(!dados.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=8;td.className='alert-empty';td.textContent='Nenhum afastamento programado para o período selecionado.';tr.appendChild(td);tbody.appendChild(tr);}
+  for(const r of dados){
+    const faltam=Math.round((Date.parse(r.data_inicio+'T00:00:00Z')-Date.parse(h+'T00:00:00Z'))/86400000);
+    const valores=[r.policiais?.matricula||'',r.policiais?.qra||'',r.policiais?.nome_completo||'',r.tipos_afastamento?.sigla||'',formatarData(r.data_inicio),formatarData(r.data_fim),r.dias,faltam===1?'Amanhã':`${faltam} dias`];
+    const tr=document.createElement('tr');valores.forEach(v=>{const td=document.createElement('td');td.textContent=String(v??'');tr.appendChild(td);});tbody.appendChild(tr);
+  }
+  $('agendaInfo').textContent='Somente afastamentos com início após hoje. Consulta baseada nos registros carregados.'+(registrosTruncados?' Atenção: a base atingiu o limite de 20.000 registros; a agenda pode estar incompleta.':'');
+}
+function exportarAgendaCsv(){
+  const dados=agendaDoPeriodo(),h=hojeISO();
+  if(!dados.length){alert('Não há afastamentos programados no período selecionado para exportar.');return;}
+  const linhas=[['Matrícula','QRA','Nome','Tipo','Início','Término','Dias','Dias até o início']];
+  dados.forEach(r=>{
+    const faltam=Math.round((Date.parse(r.data_inicio+'T00:00:00Z')-Date.parse(h+'T00:00:00Z'))/86400000);
+    linhas.push([r.policiais?.matricula||'',r.policiais?.qra||'',r.policiais?.nome_completo||'',r.tipos_afastamento?.sigla||'',formatarData(r.data_inicio),formatarData(r.data_fim),r.dias,faltam]);
+  });
+  const celula=v=>'"'+String(v??'').replace(/^[\s]*[=+@-]/,"'$&").replace(/"/g,'""')+'"';
+  const csv='\uFEFF'+linhas.map(l=>l.map(celula).join(';')).join('\r\n');
+  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+  const link=document.createElement('a');link.href=url;link.download='agenda_afastamentos_'+h+'.csv';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+$('agendaWindow').addEventListener('change',mostrarAgenda);
+$('agendaCsv').addEventListener('click',exportarAgendaCsv);
+
 function registrosFiltrados(){
   const texto=$('filterText').value.toLowerCase().trim();
   const policial=$('filterPolicial').value,mes=$('filterMes').value,averbacao=$('filterAverbacao').value;
