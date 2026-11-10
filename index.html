@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Controle de Afastamentos | 14º BPM</title>
+<title>Controle de Afastamentos V6 | 14º BPM</title>
 <style>
 :root{font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;color:#172b45;background:#f3f6fa}*{box-sizing:border-box}[hidden]{display:none!important}body{margin:0}header{background:#142f53;color:white;padding:17px 22px}.head{max-width:1150px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px}h1{font-size:20px;margin:0}header small{color:#c8d6e9}main{max-width:1150px;margin:24px auto;padding:0 15px}.panel,.stat{background:#fff;border:1px solid #dbe3ef;border-radius:13px;padding:19px;margin-bottom:17px}.login{max-width:420px;margin:60px auto}h2{font-size:19px;margin:0 0 15px}label{display:block;font-weight:600;font-size:13px;margin:12px 0 5px}input,select,textarea{width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:10px;min-height:41px;font:inherit;background:white;color:#172b45}textarea{resize:vertical}button{font:inherit;cursor:pointer;border-radius:8px;padding:10px 15px}button:disabled{opacity:.55;cursor:not-allowed}.primary{background:#1d4ed8;color:#fff;border:1px solid #1d4ed8}.secondary{background:#fff;color:#172b45;border:1px solid #cbd5e1}.login .primary{width:100%;margin-top:18px}.msg{font-size:13px;margin-top:12px;white-space:pre-wrap;overflow-wrap:anywhere}.msg.error{color:#b91c1c}.msg.ok{color:#15803d}.muted{color:#64748b;font-size:12px}.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}.toolbar h2{margin:0 0 4px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.stat{margin:0 0 17px}.stat span{color:#64748b;font-size:12px}.stat strong{display:block;font-size:27px;margin-top:5px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 15px}.full{grid-column:1/-1}.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:11px 9px;border-bottom:1px solid #e2e8f0;white-space:nowrap}th{background:#f8fafc}.tag{display:inline-block;background:#dbeafe;color:#1d4ed8;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700}.tag.done{background:#e2e8f0;color:#475569}.tag.cancel{background:#fee2e2;color:#991b1b}.tag.soon{background:#ffedd5;color:#9a3412}.filter-row{display:flex;gap:12px;align-items:end;flex-wrap:wrap}.filter-row>div{flex:1;min-width:220px}@media(max-width:720px){.stats{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.full{grid-column:auto}.panel{padding:14px}h1{font-size:16px}.stat{padding:12px}}
 .tag.av{background:#fef3c7;color:#92400e}.tag.noav{background:#f1f5f9;color:#475569}.filter-row>div{min-width:170px}.summary{font-size:12px;color:#475569;margin:8px 0}.warning{color:#9a3412;font-size:12px}.danger{background:#b91c1c;color:white;border:1px solid #b91c1c}.mini{padding:5px 9px;font-size:12px}.admin-box{border-left:4px solid #1d4ed8}.subtle{background:#f8fafc}.edit-actions{display:flex;gap:5px}.help{font-size:12px;color:#64748b;margin:8px 0}
@@ -13,6 +13,9 @@
 
 /* V5: administracao de cadastros */
 .admin-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.admin-tabs button.active{background:#1d4ed8;color:white;border-color:#1d4ed8}.admin-form{border:1px solid #dbe3ef;border-radius:10px;padding:14px;background:#f8fafc;margin:12px 0}.admin-form h3{font-size:15px;margin:0 0 8px}.admin-list td{white-space:normal}.admin-list button{margin:2px}.admin-form .grid{align-items:end}
+
+/* V6: administracao de usuarios */
+.user-actions{display:flex;gap:6px;flex-wrap:wrap}.user-table td{white-space:normal}.user-note{font-size:12px;color:#64748b}.user-table input,.user-table select{min-width:110px}.user-table input{width:190px}.user-table select{width:140px}
 </style>
 </head>
 <body>
@@ -77,6 +80,16 @@
 <div class="table-wrap"><table class="admin-list"><thead><tr><th>Sigla</th><th>Descrição</th><th>Dias fixos</th><th>Estado</th><th>Ações</th></tr></thead><tbody id="admBodyTipos"></tbody></table></div>
 </div>
 </section>
+
+<section class="panel admin-box" id="usuariosPanel" hidden>
+  <div class="toolbar"><h2>Gerenciamento de usuários (administradores)</h2><button class="secondary" id="reloadUsers" type="button">Atualizar usuários</button></div>
+  <p class="help">Para criar uma conta, use <strong>Supabase → Authentication → Users → Add user</strong>. A nova conta entra inicialmente como operador inativo. Depois, volte aqui para autorizar o acesso. Nunca informe senhas neste painel.</p>
+  <div class="table-wrap"><table class="user-table"><thead><tr><th>E-mail</th><th>Nome</th><th>Perfil</th><th>Ativo</th><th>Ações</th></tr></thead><tbody id="usersBody"></tbody></table></div>
+  <p class="msg" id="usersMessage" role="status"></p>
+  <h3>Últimas alterações de acesso</h3>
+  <div class="table-wrap"><table><thead><tr><th>Data/hora</th><th>Conta (ID)</th><th>Alterado por (ID)</th><th>Antes</th><th>Depois</th></tr></thead><tbody id="usersAuditBody"></tbody></table></div>
+  <p class="muted" id="usersAuditMessage"></p>
+</section>
 <section class="panel admin-box" id="auditPanel" hidden><h2>Auditoria (administradores)</h2><p class="help">Últimas 100 alterações registradas pelo banco. Não altere diretamente a tabela de auditoria.</p><div class="table-wrap"><table><thead><tr><th>Data/hora</th><th>Operação</th><th>Registro</th><th>Usuário (ID)</th></tr></thead><tbody id="auditBody"></tbody></table></div><p class="muted" id="auditInfo"></p></section>
 </section>
 </main>
@@ -113,6 +126,7 @@ async function verificarSessao(){
   $('actionsHeader').hidden=!ehAdmin();
   $('auditPanel').hidden=!ehAdmin();
   $('cadastrosPanel').hidden=!ehAdmin();
+  $('usuariosPanel').hidden=!ehAdmin();
   await carregarDados();
 }
 async function entrar(){
@@ -145,7 +159,7 @@ async function carregarDados(){
       ? 'Não foi possível consultar a view de averbações: '+v.error.message
       : 'Averbação indicativa: DM/LTSP por ciclo de 30 dias; a situação é do ciclo completo, não do evento individual. Os demais tipos são não aplicáveis.';
     preencherSeletores();preencherFiltroRelatorio();atualizarPainel();mostrarRegistros();atualizarRelatorio();
-    if(ehAdmin()) { await carregarAuditoria(); await carregarCadastros(); }
+    if(ehAdmin()) { await carregarAuditoria(); await carregarCadastros(); await carregarUsuarios(); }
   }catch(error){console.error('Erro ao carregar dados:',error);$('recordsInfo').textContent='Erro ao consultar registros: '+erroAmigavel(error);}
 }
 function preencherSeletores(){
@@ -461,6 +475,53 @@ $('policialAdminForm').addEventListener('submit',e=>{e.preventDefault();void sal
 $('tipoAdminForm').addEventListener('submit',e=>{e.preventDefault();void salvarTipoAdmin();});
 $('admLimparPolicial').addEventListener('click',limparPolicialAdmin);
 $('admLimparTipo').addEventListener('click',limparTipoAdmin);
+
+
+// V6: gestao de perfis via RPC com verificacao de admin no servidor.
+async function carregarUsuarios(){
+  if(!ehAdmin())return;
+  $('usersMessage').textContent='Carregando usuários...';
+  const [res,log]=await Promise.all([
+    db.rpc('v6_listar_usuarios'),
+    db.from('auditoria_perfis').select('usuario_alvo,alterado_por,alterado_em,dados_anteriores,dados_novos').order('alterado_em',{ascending:false}).limit(30)
+  ]);
+  if(res.error){setMsg('usersMessage','Erro ao listar usuários: '+erroAmigavel(res.error),true);return;}
+  const tbody=$('usersBody');tbody.replaceChildren();
+  (res.data||[]).forEach(u=>{
+    const tr=document.createElement('tr');
+    celula(tr,u.email);const tdNome=document.createElement('td');
+    const nome=document.createElement('input');nome.value=u.nome||'';nome.maxLength=160;nome.setAttribute('aria-label','Nome de '+u.email);tdNome.appendChild(nome);tr.appendChild(tdNome);
+    const tdPerfil=document.createElement('td'),perfil=document.createElement('select');
+    perfil.append(opcao('operador','Operador'),opcao('administrador','Administrador'));perfil.value=u.perfil;tdPerfil.appendChild(perfil);tr.appendChild(tdPerfil);
+    const tdAtivo=document.createElement('td'),ativo=document.createElement('input');ativo.type='checkbox';ativo.checked=u.ativo;ativo.style.width='auto';ativo.setAttribute('aria-label','Conta ativa: '+u.email);tdAtivo.appendChild(ativo);tr.appendChild(tdAtivo);
+    const tdAcao=document.createElement('td'),botao=document.createElement('button');botao.type='button';botao.className='secondary mini';botao.textContent='Salvar alterações';
+    if(u.id===usuarioAtual?.id){perfil.disabled=true;ativo.disabled=true;botao.title='Seu próprio perfil pode ter apenas o nome alterado';}
+    botao.addEventListener('click',async()=>{
+      const novoNome=nome.value.trim();if(novoNome.length<2){setMsg('usersMessage','Informe um nome com pelo menos 2 caracteres.',true);return;}
+      if(!confirm('Confirmar atualização do acesso de '+u.email+'?'))return;
+      botao.disabled=true;
+      try{
+        const {error}=await db.rpc('v6_atualizar_usuario',{p_usuario_id:u.id,p_nome:novoNome,p_perfil:perfil.value,p_ativo:ativo.checked});
+        if(error)throw error;
+        setMsg('usersMessage','Perfil atualizado: '+u.email);
+        await carregarUsuarios();
+      }catch(e){setMsg('usersMessage','Não foi possível atualizar: '+erroAmigavel(e),true);botao.disabled=false;}
+    });
+    tdAcao.appendChild(botao);tr.appendChild(tdAcao);tbody.appendChild(tr);
+  });
+  if(!(res.data||[]).length){const tr=document.createElement('tr');const td=celula(tr,'Nenhum usuário encontrado.');td.colSpan=5;tbody.appendChild(tr);}
+  $('usersMessage').textContent=`${(res.data||[]).length} conta(s) listada(s).`;
+  const logBody=$('usersAuditBody');logBody.replaceChildren();
+  if(log.error){$('usersAuditMessage').textContent='Auditoria indisponível: '+erroAmigavel(log.error);return;}
+  (log.data||[]).forEach(x=>{
+    const tr=document.createElement('tr');
+    [new Date(x.alterado_em).toLocaleString('pt-BR'),x.usuario_alvo,x.alterado_por,
+      JSON.stringify(x.dados_anteriores),JSON.stringify(x.dados_novos)].forEach(v=>celula(tr,v));
+    logBody.appendChild(tr);
+  });
+  $('usersAuditMessage').textContent=`${(log.data||[]).length} alteração(ões) de perfil exibida(s).`;
+}
+$('reloadUsers').addEventListener('click',()=>{void carregarUsuarios();});
 
 async function iniciar(){
   const botao=$('loginButton');botao.disabled=true;
