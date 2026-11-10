@@ -177,9 +177,11 @@
 <div><label for="auditSearch">Buscar registro ou usuário (ID)</label><input id="auditSearch" type="search" placeholder="ID do registro ou usuário"></div>
 </div>
 <div class="audit-actions"><button type="button" class="secondary" id="auditReload">Consultar auditoria</button><button type="button" class="secondary" id="auditClear">Limpar filtros</button><button type="button" class="primary" id="auditCsv">Exportar CSV filtrado</button></div>
-<div class="table-wrap"><table><thead><tr><th>Data/hora</th><th>Operação</th><th>Registro</th><th>Usuário (ID)</th></tr></thead><tbody id="auditBody"></tbody></table></div><p class="muted" id="auditInfo"></p>
+<div class="table-wrap"><table><thead><tr><th>Data/hora</th><th>Operação</th><th>Registro</th><th>Usuário (ID)</th></tr></thead><tbody id="auditBody"></tbody></table></div>
+<div class="audit-actions"><button type="button" class="secondary" id="auditPrev">← Página anterior</button><span id="auditPageLabel" role="status" style="align-self:center">Página 1</span><button type="button" class="secondary" id="auditNext">Próxima página →</button></div>
+<p class="muted" id="auditInfo"></p>
 <p class="audit-note">UPDATE mostra somente alterações comuns. CANCELAMENTO mostra apenas as atualizações que registraram cancelado_em. Não há filtro de exclusão física.</p>
-<p class="audit-note">A consulta de auditoria recupera no máximo 1.000 eventos recentes do período escolhido. O CSV contém somente os eventos retornados e filtrados nesta tela; não é um backup integral do banco.</p>
+<p class="audit-note">A auditoria é paginada diretamente no Supabase (100 eventos por página), sem o antigo limite de 1.000 eventos. Datas são filtradas no banco; operação e pesquisa por ID filtram a página atual. O CSV exporta somente os eventos visíveis da página, não todo o histórico nem um backup do banco.</p>
 </section>
 </section>
 </main>
@@ -204,7 +206,7 @@ function hojeISO(){const d=new Date();return [d.getFullYear(),String(d.getMonth(
 function somarDias(iso,n){const d=new Date(iso+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);}
 function formatarData(s){return s?s.split('-').reverse().join('/'):'';}
 function opcao(v,t){const e=document.createElement('option');e.value=v;e.textContent=t;return e;}
-function exibirLogin(){usuarioAtual=null;perfilAtual=null;policiais=[];tipos=[];registros=[];averbacoes=[];erroView=null;editandoId=null;auditoria=[];$('loginPage').hidden=false;$('systemPage').hidden=true;$('logout').hidden=true;}
+function exibirLogin(){usuarioAtual=null;perfilAtual=null;policiais=[];tipos=[];registros=[];averbacoes=[];erroView=null;editandoId=null;auditoria=[];paginaAuditoria=1;totalAuditoria=0;consultaAuditoriaToken++;$('loginPage').hidden=false;$('systemPage').hidden=true;$('logout').hidden=true;}
 function erroAmigavel(error){const codigo=error?.code||'';const msg=error?.message||String(error);if(codigo==='invalid_credentials'||/Invalid login credentials/i.test(msg))return 'E-mail ou senha incorretos. Confira a conta criada em Authentication → Users.';if(codigo==='email_not_confirmed'||/Email not confirmed/i.test(msg))return 'E-mail ainda não confirmado no Supabase.';if(/Invalid API key/i.test(msg))return 'Chave pública inválida. Confira a Publishable key do mesmo projeto.';return msg;}
 async function verificarSessao(){
   if(!db)throw new Error('Conexão com o Supabase não inicializada.');
@@ -357,18 +359,36 @@ async function cancelarRegistro(id){
     await carregarDados();
   }catch(error){console.error('Erro ao cancelar:',error);alert('Não foi possível cancelar: '+erroAmigavel(error));}
 }
+// V15: paginação no servidor. Cada página recupera apenas 100 eventos.
+const AUDITORIA_POR_PAGINA=100;
+let paginaAuditoria=1,totalAuditoria=0,consultaAuditoriaToken=0;
 async function carregarAuditoria(){
   if(!ehAdmin())return;
+  const token=++consultaAuditoriaToken;
   const ini=$('auditStart').value,fim=$('auditEnd').value;
   if(ini&&fim&&ini>fim){$('auditInfo').textContent='A data inicial não pode ser posterior à final.';return;}
-  $('auditInfo').textContent='Consultando auditoria...';
-  let q=db.from('auditoria').select('id,operacao,registro_id,usuario_id,data_hora,dados_anteriores,dados_novos')
-    .eq('tabela','afastamentos').order('data_hora',{ascending:false}).limit(1000);
+  $('auditInfo').textContent='Consultando página '+paginaAuditoria+' da auditoria...';
+  $('auditPrev').disabled=true;$('auditNext').disabled=true;
+  let q=db.from('auditoria')
+    .select('id,operacao,registro_id,usuario_id,data_hora,dados_anteriores,dados_novos',{count:'exact'})
+    .eq('tabela','afastamentos')
+    .order('data_hora',{ascending:false})
+    .order('id',{ascending:false})
+    .range((paginaAuditoria-1)*AUDITORIA_POR_PAGINA,paginaAuditoria*AUDITORIA_POR_PAGINA-1);
   if(ini)q=q.gte('data_hora',ini+'T00:00:00');
   if(fim)q=q.lt('data_hora',somarDias(fim,1)+'T00:00:00');
-  const {data,error}=await q;
-  if(error){console.error('Erro de auditoria:',error);auditoria=[];mostrarAuditoria();$('auditInfo').textContent='Auditoria indisponível: '+erroAmigavel(error);return;}
-  auditoria=data||[];
+  const {data,error,count}=await q;
+  if(token!==consultaAuditoriaToken)return;
+  if(error){
+    console.error('Erro de auditoria:',error);
+    auditoria=[];totalAuditoria=0;mostrarAuditoria();
+    $('auditInfo').textContent='Auditoria indisponível: '+erroAmigavel(error);
+    return;
+  }
+  auditoria=data||[];totalAuditoria=count??0;
+  // Se os últimos registros foram removidos por manutenção, retorna à página válida.
+  const ultima=Math.max(1,Math.ceil(totalAuditoria/AUDITORIA_POR_PAGINA));
+  if(paginaAuditoria>ultima){paginaAuditoria=ultima;await carregarAuditoria();return;}
   mostrarAuditoria();
 }
 function operacaoOriginalAuditoria(a){
@@ -416,7 +436,11 @@ function mostrarAuditoria(){
   }
   const contagem={INSERT:0,UPDATE:0,CANCELAMENTO:0};
   auditoria.forEach(a=>{const op=tipoEventoAuditoria(a);if(Object.hasOwn(contagem,op))contagem[op]++;});
-  $('auditInfo').textContent=`${dados.length} evento(s) exibido(s) de ${auditoria.length} carregado(s). INSERT ${contagem.INSERT}, UPDATE ${contagem.UPDATE}, CANCELAMENTO ${contagem.CANCELAMENTO}. Limite de 1.000 eventos por consulta.`;
+  const paginas=Math.max(1,Math.ceil(totalAuditoria/AUDITORIA_POR_PAGINA));
+  $('auditPageLabel').textContent=`Página ${paginaAuditoria} de ${paginas}`;
+  $('auditPrev').disabled=paginaAuditoria<=1;
+  $('auditNext').disabled=paginaAuditoria>=paginas;
+  $('auditInfo').textContent=`${dados.length} evento(s) exibido(s) nesta página; ${totalAuditoria} evento(s) no período consultado. Nesta página: INSERT ${contagem.INSERT}, UPDATE ${contagem.UPDATE}, CANCELAMENTO ${contagem.CANCELAMENTO}. Os filtros de operação e ID atuam apenas na página atual.`;
 }
 function exportarAuditoriaCsv(){
   if(!ehAdmin())return;
@@ -427,11 +451,15 @@ function exportarAuditoriaCsv(){
   const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
   const a=document.createElement('a');a.href=url;a.download='auditoria_afastamentos_'+hojeISO()+'.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
-$('auditReload').addEventListener('click',()=>{void carregarAuditoria();});
-$('auditClear').addEventListener('click',()=>{['auditStart','auditEnd','auditOperation','auditSearch'].forEach(id=>$(id).value='');void carregarAuditoria();});
+$('auditReload').addEventListener('click',()=>{paginaAuditoria=1;void carregarAuditoria();});
+$('auditClear').addEventListener('click',()=>{['auditStart','auditEnd','auditOperation','auditSearch'].forEach(id=>$(id).value='');paginaAuditoria=1;void carregarAuditoria();});
 $('auditOperation').addEventListener('change',mostrarAuditoria);
 $('auditSearch').addEventListener('input',mostrarAuditoria);
 $('auditCsv').addEventListener('click',exportarAuditoriaCsv);
+$('auditPrev').addEventListener('click',()=>{if(paginaAuditoria>1){paginaAuditoria--;void carregarAuditoria();}});
+$('auditNext').addEventListener('click',()=>{if(paginaAuditoria*AUDITORIA_POR_PAGINA<totalAuditoria){paginaAuditoria++;void carregarAuditoria();}});
+$('auditStart').addEventListener('change',()=>{paginaAuditoria=1;void carregarAuditoria();});
+$('auditEnd').addEventListener('change',()=>{paginaAuditoria=1;void carregarAuditoria();});
 
 function situacao(r){const h=hojeISO();if(r.cancelado_em)return 'Cancelado';if(r.data_fim<h)return 'Encerrado';if(r.data_inicio>h)return 'Programado';return 'Ativo';}
 function atualizarPainel(){
