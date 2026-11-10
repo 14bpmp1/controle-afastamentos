@@ -10,6 +10,9 @@
 .report-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:14px 0}.report-stat{background:#f8fafc;border:1px solid #dbe3ef;border-radius:10px;padding:12px}.report-stat strong{display:block;font-size:24px}.report-stat span{font-size:12px;color:#64748b}.report-note{font-size:12px;color:#475569}.report-print-title{display:none}
 @media(max-width:720px){.report-stats{grid-template-columns:1fr}}
 @media print{body{background:white;color:black}header,.login,.toolbar button,#afastamentoForm,#formTitle,#formHelp,#formMessage,#cancelEditButton,#clearButton,#saveButton,#exportCsv,#auditPanel,.stats,#recordsBody,#recordsInfo,#avisoAverbacao,.filter-row,.panel:not(#reportPanel){display:none!important}main{margin:0;max-width:none;padding:0}#systemPage,#reportPanel{display:block!important}#reportPanel{border:0;padding:0;margin:0}#reportPanel .actions,#reportPanel .filter-row{display:none!important}.report-print-title{display:block;font-size:14px;margin:5px 0 20px}.report-stats{grid-template-columns:repeat(3,1fr)}table{font-size:10px}th,td{white-space:normal;padding:5px} @page{size:A4 landscape;margin:12mm}}
+
+/* V5: administracao de cadastros */
+.admin-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.admin-tabs button.active{background:#1d4ed8;color:white;border-color:#1d4ed8}.admin-form{border:1px solid #dbe3ef;border-radius:10px;padding:14px;background:#f8fafc;margin:12px 0}.admin-form h3{font-size:15px;margin:0 0 8px}.admin-list td{white-space:normal}.admin-list button{margin:2px}.admin-form .grid{align-items:end}
 </style>
 </head>
 <body>
@@ -51,6 +54,29 @@
 <div class="table-wrap" style="margin-top:15px"><table><thead><tr><th>Matrícula</th><th>QRA</th><th>Nome</th><th>Tipo</th><th>Início</th><th>Término</th><th>Dias</th><th>Situação</th></tr></thead><tbody id="reportBody"></tbody></table></div>
 <p class="muted" id="reportInfo"></p>
 </section>
+
+<section class="panel admin-box" id="cadastrosPanel" hidden>
+<h2>Administração de cadastros</h2>
+<p class="help">Somente administradores. Os cadastros são desativados, nunca excluídos, para preservar o histórico de afastamentos. Utilize apenas dados fictícios.</p>
+<div class="admin-tabs"><button type="button" class="secondary active" id="tabPoliciais">Policiais</button><button type="button" class="secondary" id="tabTipos">Tipos de afastamento</button></div>
+<div id="adminPoliciais">
+<form id="policialAdminForm" class="admin-form"><h3 id="policialFormTitle">Cadastrar policial fictício</h3><div class="grid">
+<div><label for="admMatricula">Matrícula</label><input id="admMatricula" maxlength="40" required></div>
+<div><label for="admPosto">Posto / Graduação</label><input id="admPosto" maxlength="100" required></div>
+<div><label for="admQra">QRA</label><input id="admQra" maxlength="100" required></div>
+<div><label for="admNome">Nome completo</label><input id="admNome" maxlength="200" required></div>
+</div><div class="actions"><button class="primary" type="submit" id="admSalvarPolicial">Salvar policial</button><button class="secondary" type="button" id="admLimparPolicial">Limpar</button></div><div class="msg" id="admMsgPolicial" role="status"></div></form>
+<div class="table-wrap"><table class="admin-list"><thead><tr><th>Matrícula</th><th>Posto / Graduação</th><th>QRA</th><th>Nome completo</th><th>Estado</th><th>Ações</th></tr></thead><tbody id="admBodyPoliciais"></tbody></table></div>
+</div>
+<div id="adminTipos" hidden>
+<form id="tipoAdminForm" class="admin-form"><h3 id="tipoFormTitle">Cadastrar tipo de afastamento</h3><div class="grid">
+<div><label for="admSigla">Sigla</label><input id="admSigla" maxlength="30" required></div>
+<div><label for="admDescricao">Descrição</label><input id="admDescricao" maxlength="200" required></div>
+<div><label for="admDiasFixos">Dias fixos (opcional)</label><input id="admDiasFixos" type="number" min="1" max="3650" placeholder="Vazio = duração variável"></div>
+</div><div class="actions"><button class="primary" type="submit" id="admSalvarTipo">Salvar tipo</button><button class="secondary" type="button" id="admLimparTipo">Limpar</button></div><div class="msg" id="admMsgTipo" role="status"></div></form>
+<div class="table-wrap"><table class="admin-list"><thead><tr><th>Sigla</th><th>Descrição</th><th>Dias fixos</th><th>Estado</th><th>Ações</th></tr></thead><tbody id="admBodyTipos"></tbody></table></div>
+</div>
+</section>
 <section class="panel admin-box" id="auditPanel" hidden><h2>Auditoria (administradores)</h2><p class="help">Últimas 100 alterações registradas pelo banco. Não altere diretamente a tabela de auditoria.</p><div class="table-wrap"><table><thead><tr><th>Data/hora</th><th>Operação</th><th>Registro</th><th>Usuário (ID)</th></tr></thead><tbody id="auditBody"></tbody></table></div><p class="muted" id="auditInfo"></p></section>
 </section>
 </main>
@@ -64,6 +90,7 @@ const SUPABASE_KEY = 'sb_publishable_TglXGBSgyQqqE41I8jTrtA_t8b6544Y';
 const $ = id => document.getElementById(id);
 let db = null, usuarioAtual = null, perfilAtual = null;
 let policiais = [], tipos = [], registros = [], averbacoes = [], erroView = null;
+let todosPoliciais = [], todosTipos = [], editPolicialId = null, editTipoId = null;
 let editandoId = null, auditoria = [];
 const ehAdmin = () => perfilAtual?.perfil === "administrador" && perfilAtual?.ativo === true;
 const setMsg = (id, msg, erro=false) => { const e=$(id); e.textContent=msg; e.className='msg '+(erro?'error':'ok'); };
@@ -85,6 +112,7 @@ async function verificarSessao(){
   $('userInfo').textContent=perfil.nome+' · '+perfil.perfil;
   $('actionsHeader').hidden=!ehAdmin();
   $('auditPanel').hidden=!ehAdmin();
+  $('cadastrosPanel').hidden=!ehAdmin();
   await carregarDados();
 }
 async function entrar(){
@@ -117,7 +145,7 @@ async function carregarDados(){
       ? 'Não foi possível consultar a view de averbações: '+v.error.message
       : 'Averbação indicativa: DM/LTSP por ciclo de 30 dias; a situação é do ciclo completo, não do evento individual. Os demais tipos são não aplicáveis.';
     preencherSeletores();preencherFiltroRelatorio();atualizarPainel();mostrarRegistros();atualizarRelatorio();
-    if(ehAdmin()) await carregarAuditoria();
+    if(ehAdmin()) { await carregarAuditoria(); await carregarCadastros(); }
   }catch(error){console.error('Erro ao carregar dados:',error);$('recordsInfo').textContent='Erro ao consultar registros: '+erroAmigavel(error);}
 }
 function preencherSeletores(){
@@ -328,6 +356,112 @@ $('afastamentoForm').addEventListener('submit',e=>{e.preventDefault();void salva
 $('tipo').addEventListener('change',atualizarTipo);$('inicio').addEventListener('change',calcularTermino);$('dias').addEventListener('input',calcularTermino);
 $('clearButton').addEventListener('click',limparFormulario);$('cancelEditButton').addEventListener('click',limparFormulario);
 ['filterText','filterPolicial','filterMes','filterAverbacao'].forEach(id=>$(id).addEventListener(id==='filterText'?'input':'change',mostrarRegistros));$('refresh').addEventListener('click',()=>{void carregarDados();});$('logout').addEventListener('click',()=>{void sair();});
+
+// V5: gerenciamento de cadastros com RLS no servidor.
+async function carregarCadastros(){
+  if(!ehAdmin())return;
+  const [p,t]=await Promise.all([
+    db.from('policiais').select('id,matricula,posto_graduacao,qra,nome_completo,ativo').order('matricula'),
+    db.from('tipos_afastamento').select('id,sigla,descricao,dias_fixos,ativo').order('sigla')
+  ]);
+  if(p.error||t.error){
+    const erro=p.error||t.error;
+    setMsg('admMsgPolicial','Não foi possível consultar os cadastros: '+erroAmigavel(erro),true);
+    return;
+  }
+  todosPoliciais=p.data||[];todosTipos=t.data||[];
+  renderizarCadastros();
+}
+function celula(tr,valor){const td=document.createElement('td');td.textContent=String(valor??'');tr.appendChild(td);return td;}
+function botaoAcao(td,rotulo,acao){const b=document.createElement('button');b.type='button';b.className='secondary mini';b.textContent=rotulo;b.addEventListener('click',acao);td.appendChild(b);}
+function renderizarCadastros(){
+  const pb=$('admBodyPoliciais'),tb=$('admBodyTipos');pb.replaceChildren();tb.replaceChildren();
+  for(const p of todosPoliciais){
+    const tr=document.createElement('tr');
+    [p.matricula,p.posto_graduacao,p.qra,p.nome_completo,p.ativo?'Ativo':'Inativo'].forEach(v=>celula(tr,v));
+    const td=celula(tr,'');td.textContent='';
+    botaoAcao(td,'Editar',()=>editarPolicialAdmin(p.id));
+    botaoAcao(td,p.ativo?'Desativar':'Reativar',()=>alternarCadastro('policiais',p));
+    pb.appendChild(tr);
+  }
+  for(const t of todosTipos){
+    const tr=document.createElement('tr');
+    [t.sigla,t.descricao,t.dias_fixos??'Variável',t.ativo?'Ativo':'Inativo'].forEach(v=>celula(tr,v));
+    const td=celula(tr,'');td.textContent='';
+    botaoAcao(td,'Editar',()=>editarTipoAdmin(t.id));
+    botaoAcao(td,t.ativo?'Desativar':'Reativar',()=>alternarCadastro('tipos_afastamento',t));
+    tb.appendChild(tr);
+  }
+}
+function limparPolicialAdmin(){editPolicialId=null;$('policialAdminForm').reset();$('policialFormTitle').textContent='Cadastrar policial fictício';$('admMsgPolicial').textContent='';}
+function limparTipoAdmin(){editTipoId=null;$('tipoAdminForm').reset();$('tipoFormTitle').textContent='Cadastrar tipo de afastamento';$('admMsgTipo').textContent='';}
+function editarPolicialAdmin(id){
+  const p=todosPoliciais.find(x=>x.id===id);if(!p)return;
+  editPolicialId=id;$('admMatricula').value=p.matricula;$('admPosto').value=p.posto_graduacao;
+  $('admQra').value=p.qra;$('admNome').value=p.nome_completo;
+  $('policialFormTitle').textContent='Editar policial '+p.matricula;
+  $('cadastrosPanel').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function editarTipoAdmin(id){
+  const t=todosTipos.find(x=>x.id===id);if(!t)return;
+  editTipoId=id;$('admSigla').value=t.sigla;$('admDescricao').value=t.descricao;
+  $('admDiasFixos').value=t.dias_fixos??'';
+  $('tipoFormTitle').textContent='Editar tipo '+t.sigla;
+  $('cadastrosPanel').scrollIntoView({behavior:'smooth',block:'start'});
+}
+async function salvarPolicialAdmin(){
+  if(!ehAdmin())return;
+  const btn=$('admSalvarPolicial');btn.disabled=true;
+  try{
+    const obj={matricula:$('admMatricula').value.trim().toUpperCase(),posto_graduacao:$('admPosto').value.trim(),qra:$('admQra').value.trim(),nome_completo:$('admNome').value.trim()};
+    if(Object.values(obj).some(v=>!v))throw new Error('Preencha todos os campos.');
+    const res=editPolicialId!==null
+      ?await db.from('policiais').update(obj).eq('id',editPolicialId).select('id').single()
+      :await db.from('policiais').insert(obj).select('id').single();
+    if(res.error)throw res.error;
+    limparPolicialAdmin();await carregarDados();setMsg('admMsgPolicial','Cadastro salvo com sucesso.');
+  }catch(e){console.error(e);setMsg('admMsgPolicial','Erro ao salvar: '+erroAmigavel(e),true);}
+  finally{btn.disabled=false;}
+}
+async function salvarTipoAdmin(){
+  if(!ehAdmin())return;
+  const btn=$('admSalvarTipo');btn.disabled=true;
+  try{
+    const bruto=$('admDiasFixos').value.trim();
+    const dias=bruto===''?null:Number(bruto);
+    if(dias!==null&&(!Number.isInteger(dias)||dias<1||dias>3650))throw new Error('Dias fixos devem ser um número entre 1 e 3650.');
+    const obj={sigla:$('admSigla').value.trim().toUpperCase(),descricao:$('admDescricao').value.trim(),dias_fixos:dias};
+    if(!obj.sigla||!obj.descricao)throw new Error('Preencha a sigla e a descrição.');
+    const res=editTipoId!==null
+      ?await db.from('tipos_afastamento').update(obj).eq('id',editTipoId).select('id').single()
+      :await db.from('tipos_afastamento').insert(obj).select('id').single();
+    if(res.error)throw res.error;
+    limparTipoAdmin();await carregarDados();setMsg('admMsgTipo','Tipo salvo com sucesso.');
+  }catch(e){console.error(e);setMsg('admMsgTipo','Erro ao salvar: '+erroAmigavel(e),true);}
+  finally{btn.disabled=false;}
+}
+async function alternarCadastro(tabela,registro){
+  if(!ehAdmin())return;
+  const novo=!registro.ativo;
+  const nome=tabela==='policiais'?registro.matricula:registro.sigla;
+  if(!confirm(`${novo?'Reativar':'Desativar'} ${nome}? O histórico de afastamentos será preservado.`))return;
+  const idMsg=tabela==='policiais'?'admMsgPolicial':'admMsgTipo';
+  const {data,error}=await db.from(tabela).update({ativo:novo}).eq('id',registro.id).select('id').single();
+  if(error||!data){setMsg(idMsg,'Erro ao alterar cadastro: '+erroAmigavel(error||new Error('Nenhuma linha atualizada.')),true);return;}
+  await carregarDados();setMsg(idMsg,`Cadastro ${novo?'reativado':'desativado'} com sucesso.`);
+}
+function mostrarAbaAdmin(tipo){
+  $('adminPoliciais').hidden=tipo!=='policiais';$('adminTipos').hidden=tipo!=='tipos';
+  $('tabPoliciais').classList.toggle('active',tipo==='policiais');
+  $('tabTipos').classList.toggle('active',tipo==='tipos');
+}
+$('tabPoliciais').addEventListener('click',()=>mostrarAbaAdmin('policiais'));
+$('tabTipos').addEventListener('click',()=>mostrarAbaAdmin('tipos'));
+$('policialAdminForm').addEventListener('submit',e=>{e.preventDefault();void salvarPolicialAdmin();});
+$('tipoAdminForm').addEventListener('submit',e=>{e.preventDefault();void salvarTipoAdmin();});
+$('admLimparPolicial').addEventListener('click',limparPolicialAdmin);
+$('admLimparTipo').addEventListener('click',limparTipoAdmin);
+
 async function iniciar(){
   const botao=$('loginButton');botao.disabled=true;
   try{
