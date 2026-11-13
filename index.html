@@ -67,11 +67,9 @@
 .v20-icon-action:focus-visible{outline:3px solid #93c5fd;outline-offset:2px}
 .admin-list td:last-child{white-space:nowrap;width:86px}
 .user-table input[type=checkbox]{width:16px!important;height:16px!important;min-width:16px!important;min-height:16px!important;padding:0!important;vertical-align:middle;accent-color:#1d4ed8}
-.v20-averbacao-alerta{background:#fff7ed;border:1px solid #fdba74;border-left:5px solid #ea580c;color:#7c2d12;padding:14px 17px;border-radius:10px;margin:12px 0 18px}
-.v20-averbacao-alerta strong{display:block;margin-bottom:5px}.v20-averbacao-alerta p{margin:5px 0;font-size:13px}
 @media(max-width:900px){#systemPage{--menu-largura:64px}#systemPage:not(.menu-fechado){--menu-largura:218px}#v11Nav{top:65px;left:5px}#systemPage:not(.menu-fechado){padding-left:76px}#systemPage:not(.menu-fechado) #v11Nav{box-shadow:8px 10px 35px #142f5355}main{max-width:none}}
 @media(max-width:520px){#systemPage,#systemPage.menu-fechado{padding-left:57px}#v11Nav{left:3px;top:61px}#systemPage:not(.menu-fechado) #v11Nav{width:218px}}
-@media print{#systemPage,#systemPage.menu-fechado{padding-left:0!important}#v11Nav,.v20-averbacao-alerta{display:none!important}}
+@media print{#systemPage,#systemPage.menu-fechado{padding-left:0!important}#v11Nav{display:none!important}}
 </style>
 </head>
 <body>
@@ -99,7 +97,7 @@
     <a class="v11-admin-link" href="#auditPanel" hidden title="Auditoria"><span class="v20-menu-icon" aria-hidden="true">☑</span><span class="v20-menu-label">Auditoria</span></a>
   </div>
 </nav>
-<div class="v20-averbacao-alerta" id="v20AvisoAverbacao" role="status" hidden></div>
+
 <div class="stats v11-jump" id="v11Dashboard"><div class="stat"><span>Policiais cadastrados</span><strong id="statPoliciais">—</strong></div><div class="stat"><span>Afastamentos ativos</span><strong id="statAtivos">—</strong></div><div class="stat"><span>Próximos do término (5 dias)</span><strong id="statProximos">—</strong></div><div class="stat"><span>Encerrados</span><strong id="statEncerrados">—</strong></div><div class="stat"><span>Ciclos para averbar</span><strong id="statAverbacoes">—</strong></div></div>
 <section class="panel" id="alertsPanel" aria-labelledby="alertsTitle">
 <div class="alerts-head"><div><h2 id="alertsTitle">Alertas de retorno</h2><p class="help">Afastamentos em andamento, próximos da data de término. Atualização ao consultar o painel.</p></div><div><label for="alertsWindow">Período de alerta</label><select id="alertsWindow"><option value="1">Hoje e amanhã</option><option value="5" selected>Até 5 dias</option><option value="7">Até 7 dias</option><option value="15">Até 15 dias</option><option value="30">Até 30 dias</option></select></div></div>
@@ -308,7 +306,7 @@ $('v19TimeoutOverlay').addEventListener('keydown',e=>{
   if(e.shiftKey&&document.activeElement===a){e.preventDefault();b.focus();}
   else if(!e.shiftKey&&document.activeElement===b){e.preventDefault();a.focus();}
 });
-function exibirLogin(){v19StopIdle();usuarioAtual=null;perfilAtual=null;policiais=[];tipos=[];registros=[];averbacoes=[];erroView=null;editandoId=null;auditoria=[];v20EmailsUsuarios=new Map();$('v20AvisoAverbacao').hidden=true;relatorioToken++;registrosRelatorio=[];totalRelatorio=0;paginaRelatorio=1;historicoToken++;registrosHistorico=[];totalHistorico=0;paginaHistorico=1;paginaAuditoria=1;totalAuditoria=0;consultaAuditoriaToken++;$('loginPage').hidden=false;$('systemPage').hidden=true;$('logout').hidden=true;
+function exibirLogin(){v19StopIdle();usuarioAtual=null;perfilAtual=null;policiais=[];tipos=[];registros=[];averbacoes=[];erroView=null;editandoId=null;auditoria=[];v20EmailsUsuarios=new Map();relatorioToken++;registrosRelatorio=[];totalRelatorio=0;paginaRelatorio=1;historicoToken++;registrosHistorico=[];totalHistorico=0;paginaHistorico=1;paginaAuditoria=1;totalAuditoria=0;consultaAuditoriaToken++;$('loginPage').hidden=false;$('systemPage').hidden=true;$('logout').hidden=true;
   $('password').value='';
   document.querySelectorAll('#systemPage tbody').forEach(t=>t.replaceChildren());
   ['userInfo','recordsInfo','reportInfo','historyInfo','auditInfo','alertsSummary'].forEach(id=>{const el=$(id);if(el)el.textContent='';});
@@ -384,32 +382,27 @@ async function carregarDados(){
     $('avisoAverbacao').textContent=erroView
       ? 'Não foi possível consultar a view de averbações: '+(erroView.message||String(erroView))
       : 'Averbação indicativa: DM/LTSP por ciclo de 30 dias; a situação é do ciclo completo, não do evento individual. Os demais tipos são não aplicáveis.'+(averbacoesTruncadas?' Atenção: consulta de averbações atingiu o limite de 20.000 linhas.':'');
-    preencherSeletores();preencherFiltroRelatorio();preencherHistorico();atualizarPainel();v20MostrarAvisoAverbacao();mostrarAlertas();mostrarAgenda();mostrarRegistros();void consultarRelatorio();void consultarHistorico();
+    preencherSeletores();preencherFiltroRelatorio();preencherHistorico();atualizarPainel();mostrarAlertas();mostrarAgenda();mostrarRegistros();void consultarRelatorio();void consultarHistorico();
     if(ehAdmin()) { await Promise.all([carregarAuditoria(),carregarCadastros(),carregarUsuarios(),v20CarregarEmailsAuditoria()]); }
   }catch(error){console.error('Erro ao carregar dados:',error);$('recordsInfo').textContent='Erro ao consultar registros: '+erroAmigavel(error);}
 }
-function v20MostrarAvisoAverbacao(){
-  const aviso=$('v20AvisoAverbacao');aviso.replaceChildren();
-  if(erroView){aviso.hidden=true;return;}
-  const ciclos=new Map();
-  for(const a of averbacoes){
-    if(a.situacao_averbacao!=='AVERBAR')continue;
-    const chave=String(a.policial_id)+':'+String(a.numero_ciclo);
-    if(!ciclos.has(chave))ciclos.set(chave,a);
+// V21: aviso pontual somente após a inclusão bem-sucedida de um afastamento.
+// Consulta a view existente sem alterar qualquer regra de averbação.
+async function v21AvisarAverbacaoAposCadastro(id, policialId){
+  try{
+    const {data,error}=await db.from('vw_averbacoes')
+      .select('afastamento_id,policial_id,numero_ciclo,inicio_ciclo,fim_ciclo,total_dias,situacao_averbacao')
+      .eq('afastamento_id',id).eq('policial_id',policialId).limit(1);
+    if(error)throw error;
+    const a=(data||[])[0];
+    if(a?.situacao_averbacao!=='AVERBAR')return;
+    const p=policiais.find(x=>String(x.id)===String(policialId));
+    const nome=p?`${p.qra} — ${p.nome_completo}`:`Policial ${policialId}`;
+    alert(`⚠ ATENÇÃO: AVERBAÇÃO NECESSÁRIA\n\nO afastamento cadastrado para ${nome} possui indicação de AVERBAR.\n\nCiclo: ${formatarData(a.inicio_ciclo)} a ${formatarData(a.fim_ciclo)}\nTotal no ciclo: ${a.total_dias} dia(s).\n\nAviso indicativo conforme as regras atuais do sistema.`);
+  }catch(error){
+    console.error('Não foi possível verificar a indicação de averbação após o cadastro:',error);
+    setMsg('formMessage','Registro salvo com sucesso, mas não foi possível verificar a indicação de averbação. Consulte a coluna Averbação nos registros.',true);
   }
-  if(!ciclos.size){aviso.hidden=true;return;}
-  aviso.hidden=false;
-  const titulo=document.createElement('strong');titulo.textContent='⚠ Atenção: '+ciclos.size+' ciclo(s) com indicação de averbação';aviso.appendChild(titulo);
-  const resumo=document.createElement('p');resumo.textContent='Aviso indicativo com base na view atual de averbações. As regras de cálculo não foram alteradas.';aviso.appendChild(resumo);
-  const detalhes=[...ciclos.values()].slice(0,8);
-  for(const a of detalhes){
-    const p=policiais.find(x=>String(x.id)===String(a.policial_id));
-    const linha=document.createElement('p');
-    linha.textContent='• '+(p?`${p.matricula} · ${p.qra} · ${p.nome_completo}`:'Policial ID: '+a.policial_id)+' — ciclo '+formatarData(a.inicio_ciclo)+' a '+formatarData(a.fim_ciclo)+' ('+a.total_dias+' dias)';
-    aviso.appendChild(linha);
-  }
-  if(ciclos.size>8){const mais=document.createElement('p');mais.textContent='E mais '+(ciclos.size-8)+' ciclo(s). Consulte Registros para detalhes.';aviso.appendChild(mais);}
-  if(averbacoesTruncadas){const alerta=document.createElement('p');alerta.textContent='Atenção: limite de consulta atingido; o total pode estar incompleto.';aviso.appendChild(alerta);}
 }
 function preencherSeletores(){
   const p=$('policial'),t=$('tipo');p.replaceChildren(opcao('','Selecione o policial'));t.replaceChildren(opcao('','Selecione o tipo'));
@@ -469,6 +462,7 @@ async function salvarAfastamento(){
     if(t?.dias_fixos!==null&&t?.dias_fixos!==undefined&&dias!==t.dias_fixos)throw new Error('A duração deve respeitar os dias fixos do tipo.');
     botao.disabled=true;setMsg('formMessage','Salvando...');
     const payload={tipo_id,data_inicio,data_fim,observacoes:$('observacoes').value.trim()||null};
+    const inclusaoNova=editandoId===null;
     let resultado;
     if(editandoId!==null){
       resultado=await db.from('afastamentos').update(payload).eq('id',editandoId).select('id');
@@ -481,6 +475,7 @@ async function salvarAfastamento(){
     limparFormulario();
     setMsg('formMessage','Registro salvo com sucesso!');
     await carregarDados();
+    if(inclusaoNova)await v21AvisarAverbacaoAposCadastro(resultado.data[0].id,policial_id);
   }catch(error){console.error('Erro ao salvar:',error);setMsg('formMessage',error.code==='23P01'?'Já existe afastamento sobreposto para este policial.':'Não foi possível salvar: '+erroAmigavel(error),true);}
   finally{botao.disabled=false;}
 }
