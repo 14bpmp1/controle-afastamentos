@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Controle de Afastamentos V13 | 14º BPM</title>
+<title>Controle de Afastamentos V20 | 14º BPM</title>
 <style>
 :root{font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;color:#172b45;background:#f3f6fa}*{box-sizing:border-box}[hidden]{display:none!important}body{margin:0}header{background:#142f53;color:white;padding:17px 22px}.head{max-width:1150px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px}h1{font-size:20px;margin:0}header small{color:#c8d6e9}main{max-width:1150px;margin:24px auto;padding:0 15px}.panel,.stat{background:#fff;border:1px solid #dbe3ef;border-radius:13px;padding:19px;margin-bottom:17px}.login{max-width:420px;margin:60px auto}h2{font-size:19px;margin:0 0 15px}label{display:block;font-weight:600;font-size:13px;margin:12px 0 5px}input,select,textarea{width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:10px;min-height:41px;font:inherit;background:white;color:#172b45}textarea{resize:vertical}button{font:inherit;cursor:pointer;border-radius:8px;padding:10px 15px}button:disabled{opacity:.55;cursor:not-allowed}.primary{background:#1d4ed8;color:#fff;border:1px solid #1d4ed8}.secondary{background:#fff;color:#172b45;border:1px solid #cbd5e1}.login .primary{width:100%;margin-top:18px}.msg{font-size:13px;margin-top:12px;white-space:pre-wrap;overflow-wrap:anywhere}.msg.error{color:#b91c1c}.msg.ok{color:#15803d}.muted{color:#64748b;font-size:12px}.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}.toolbar h2{margin:0 0 4px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.stat{margin:0 0 17px}.stat span{color:#64748b;font-size:12px}.stat strong{display:block;font-size:27px;margin-top:5px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 15px}.full{grid-column:1/-1}.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:11px 9px;border-bottom:1px solid #e2e8f0;white-space:nowrap}th{background:#f8fafc}.tag{display:inline-block;background:#dbeafe;color:#1d4ed8;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700}.tag.done{background:#e2e8f0;color:#475569}.tag.cancel{background:#fee2e2;color:#991b1b}.tag.soon{background:#ffedd5;color:#9a3412}.filter-row{display:flex;gap:12px;align-items:end;flex-wrap:wrap}.filter-row>div{flex:1;min-width:220px}@media(max-width:720px){.stats{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.full{grid-column:auto}.panel{padding:14px}h1{font-size:16px}.stat{padding:12px}}
 .tag.av{background:#fef3c7;color:#92400e}.tag.noav{background:#f1f5f9;color:#475569}.filter-row>div{min-width:170px}.summary{font-size:12px;color:#475569;margin:8px 0}.warning{color:#9a3412;font-size:12px}.danger{background:#b91c1c;color:white;border:1px solid #b91c1c}.mini{padding:5px 9px;font-size:12px}.admin-box{border-left:4px solid #1d4ed8}.subtle{background:#f8fafc}.edit-actions{display:flex;gap:5px}.help{font-size:12px;color:#64748b;margin:8px 0}
@@ -48,6 +48,30 @@
 .v19-dialog{background:white;color:#172b45;border-radius:14px;padding:25px;max-width:470px;width:100%;box-shadow:0 16px 50px #0005}
 .v19-dialog h2{margin:0 0 12px}.v19-dialog p{line-height:1.55}.v19-dialog .actions{justify-content:flex-end}
 @media print{.v19-overlay{display:none!important}}
+
+/* V20: menu lateral recolhível, preservando os módulos originais. */
+#systemPage{--menu-largura:218px;padding-left:calc(var(--menu-largura) + 12px);transition:padding-left .2s}
+#systemPage.menu-fechado{--menu-largura:64px}
+#v11Nav{position:fixed;top:75px;bottom:12px;left:12px;width:var(--menu-largura);overflow-y:auto;z-index:40;display:flex;flex-direction:column;gap:10px;box-shadow:0 8px 25px #142f5322;transition:width .2s}
+#v11Nav .v11-nav-links{display:flex;flex-direction:column;gap:5px;overflow:visible}
+#v11Nav .v11-nav-links a{display:flex;align-items:center;gap:10px;min-height:42px;white-space:nowrap;overflow:hidden}
+#v11Nav .v20-menu-icon{font-size:18px;flex:none;width:22px;text-align:center}
+#v11Nav .v20-menu-label{overflow:hidden;text-overflow:ellipsis}
+#v11Nav .v20-menu-head{display:flex;align-items:center;justify-content:space-between;gap:4px}
+#v11Nav .v20-menu-toggle{padding:7px;min-width:38px;min-height:38px;border:1px solid #cbd5e1;background:white;color:#142f53}
+#systemPage.menu-fechado #v11Nav .v20-menu-label,#systemPage.menu-fechado #v11Nav .v11-nav-title{display:none}
+#systemPage.menu-fechado #v11Nav .v11-nav-links a{justify-content:center;padding:7px}
+#systemPage.menu-fechado #v11Nav .v20-menu-head{justify-content:center}
+.v20-icon-action{width:34px;height:34px;min-width:34px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:17px;margin:2px;border-radius:8px}
+.v20-icon-action.v20-danger{color:#b91c1c;border-color:#fca5a5;background:#fff7f7}
+.v20-icon-action:focus-visible{outline:3px solid #93c5fd;outline-offset:2px}
+.admin-list td:last-child{white-space:nowrap;width:86px}
+.user-table input[type=checkbox]{width:16px!important;height:16px!important;min-width:16px!important;min-height:16px!important;padding:0!important;vertical-align:middle;accent-color:#1d4ed8}
+.v20-averbacao-alerta{background:#fff7ed;border:1px solid #fdba74;border-left:5px solid #ea580c;color:#7c2d12;padding:14px 17px;border-radius:10px;margin:12px 0 18px}
+.v20-averbacao-alerta strong{display:block;margin-bottom:5px}.v20-averbacao-alerta p{margin:5px 0;font-size:13px}
+@media(max-width:900px){#systemPage{--menu-largura:64px}#systemPage:not(.menu-fechado){--menu-largura:218px}#v11Nav{top:65px;left:5px}#systemPage:not(.menu-fechado){padding-left:76px}#systemPage:not(.menu-fechado) #v11Nav{box-shadow:8px 10px 35px #142f5355}main{max-width:none}}
+@media(max-width:520px){#systemPage,#systemPage.menu-fechado{padding-left:57px}#v11Nav{left:3px;top:61px}#systemPage:not(.menu-fechado) #v11Nav{width:218px}}
+@media print{#systemPage,#systemPage.menu-fechado{padding-left:0!important}#v11Nav,.v20-averbacao-alerta{display:none!important}}
 </style>
 </head>
 <body>
@@ -61,20 +85,21 @@
 <section id="systemPage" hidden>
 <div class="toolbar"><div><h2>Painel de Afastamentos</h2><div class="muted" id="userInfo"></div></div><button class="secondary" id="refresh" type="button">Atualizar</button></div>
 <nav class="v11-nav" id="v11Nav" aria-label="Navegação entre módulos">
-  <div class="v11-nav-title">Acesso rápido aos módulos</div>
+  <div class="v20-menu-head"><div class="v11-nav-title">Módulos</div><button type="button" class="v20-menu-toggle" id="v20ToggleMenu" aria-label="Recolher menu lateral" aria-expanded="true" title="Recolher ou expandir menu">☰</button></div>
   <div class="v11-nav-links">
-    <a href="#v11Dashboard">Painel</a>
-    <a href="#alertsPanel">Alertas</a>
-    <a href="#agendaPanel">Agenda</a>
-    <a href="#v11Cadastro">Novo afastamento</a>
-    <a href="#v11Registros">Registros</a>
-    <a href="#historyPanel">Histórico individual</a>
-    <a href="#reportPanel">Relatórios</a>
-    <a class="v11-admin-link" href="#cadastrosPanel" hidden>Cadastros</a>
-    <a class="v11-admin-link" href="#usuariosPanel" hidden>Usuários</a>
-    <a class="v11-admin-link" href="#auditPanel" hidden>Auditoria</a>
+    <a href="#v11Dashboard" title="Painel"><span class="v20-menu-icon" aria-hidden="true">▦</span><span class="v20-menu-label">Painel</span></a>
+    <a href="#alertsPanel" title="Alertas"><span class="v20-menu-icon" aria-hidden="true">🔔</span><span class="v20-menu-label">Alertas</span></a>
+    <a href="#agendaPanel" title="Agenda"><span class="v20-menu-icon" aria-hidden="true">▤</span><span class="v20-menu-label">Agenda</span></a>
+    <a href="#v11Cadastro" title="Novo afastamento"><span class="v20-menu-icon" aria-hidden="true">＋</span><span class="v20-menu-label">Novo afastamento</span></a>
+    <a href="#v11Registros" title="Registros"><span class="v20-menu-icon" aria-hidden="true">☷</span><span class="v20-menu-label">Registros</span></a>
+    <a href="#historyPanel" title="Histórico individual"><span class="v20-menu-icon" aria-hidden="true">◷</span><span class="v20-menu-label">Histórico individual</span></a>
+    <a href="#reportPanel" title="Relatórios"><span class="v20-menu-icon" aria-hidden="true">▥</span><span class="v20-menu-label">Relatórios</span></a>
+    <a class="v11-admin-link" href="#cadastrosPanel" hidden title="Cadastros"><span class="v20-menu-icon" aria-hidden="true">♙</span><span class="v20-menu-label">Cadastros</span></a>
+    <a class="v11-admin-link" href="#usuariosPanel" hidden title="Usuários"><span class="v20-menu-icon" aria-hidden="true">♙</span><span class="v20-menu-label">Usuários</span></a>
+    <a class="v11-admin-link" href="#auditPanel" hidden title="Auditoria"><span class="v20-menu-icon" aria-hidden="true">☑</span><span class="v20-menu-label">Auditoria</span></a>
   </div>
 </nav>
+<div class="v20-averbacao-alerta" id="v20AvisoAverbacao" role="status" hidden></div>
 <div class="stats v11-jump" id="v11Dashboard"><div class="stat"><span>Policiais cadastrados</span><strong id="statPoliciais">—</strong></div><div class="stat"><span>Afastamentos ativos</span><strong id="statAtivos">—</strong></div><div class="stat"><span>Próximos do término (5 dias)</span><strong id="statProximos">—</strong></div><div class="stat"><span>Encerrados</span><strong id="statEncerrados">—</strong></div><div class="stat"><span>Ciclos para averbar</span><strong id="statAverbacoes">—</strong></div></div>
 <section class="panel" id="alertsPanel" aria-labelledby="alertsTitle">
 <div class="alerts-head"><div><h2 id="alertsTitle">Alertas de retorno</h2><p class="help">Afastamentos em andamento, próximos da data de término. Atualização ao consultar o painel.</p></div><div><label for="alertsWindow">Período de alerta</label><select id="alertsWindow"><option value="1">Hoje e amanhã</option><option value="5" selected>Até 5 dias</option><option value="7">Até 7 dias</option><option value="15">Até 15 dias</option><option value="30">Até 30 dias</option></select></div></div>
@@ -180,10 +205,10 @@
 <div><label for="auditStart">De</label><input id="auditStart" type="date"></div>
 <div><label for="auditEnd">Até</label><input id="auditEnd" type="date"></div>
 <div><label for="auditOperation">Operação</label><select id="auditOperation"><option value="">Todas</option><option value="INSERT">INSERT (inclusão)</option><option value="UPDATE">UPDATE (alterações)</option><option value="CANCELAMENTO">CANCELAMENTO</option></select></div>
-<div><label for="auditSearch">Buscar registro ou usuário (ID)</label><input id="auditSearch" type="search" placeholder="ID do registro ou usuário"></div>
+<div><label for="auditSearch">Buscar registro, usuário (ID ou e-mail)</label><input id="auditSearch" type="search" placeholder="ID do registro ou e-mail"></div>
 </div>
 <div class="audit-actions"><button type="button" class="secondary" id="auditReload">Consultar auditoria</button><button type="button" class="secondary" id="auditClear">Limpar filtros</button><button type="button" class="primary" id="auditCsv">Exportar CSV filtrado</button></div>
-<div class="table-wrap"><table><thead><tr><th>Data/hora</th><th>Operação</th><th>Registro</th><th>Usuário (ID)</th></tr></thead><tbody id="auditBody"></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>Data/hora</th><th>Operação</th><th>Registro</th><th>Usuário (e-mail)</th></tr></thead><tbody id="auditBody"></tbody></table></div>
 <div class="audit-actions"><button type="button" class="secondary" id="auditPrev">← Página anterior</button><span id="auditPageLabel" role="status" style="align-self:center">Página 1</span><button type="button" class="secondary" id="auditNext">Próxima página →</button></div>
 <p class="muted" id="auditInfo"></p>
 <p class="audit-note">UPDATE mostra somente alterações comuns. CANCELAMENTO mostra apenas as atualizações que registraram cancelado_em. Não há filtro de exclusão física.</p>
@@ -283,7 +308,7 @@ $('v19TimeoutOverlay').addEventListener('keydown',e=>{
   if(e.shiftKey&&document.activeElement===a){e.preventDefault();b.focus();}
   else if(!e.shiftKey&&document.activeElement===b){e.preventDefault();a.focus();}
 });
-function exibirLogin(){v19StopIdle();usuarioAtual=null;perfilAtual=null;policiais=[];tipos=[];registros=[];averbacoes=[];erroView=null;editandoId=null;auditoria=[];relatorioToken++;registrosRelatorio=[];totalRelatorio=0;paginaRelatorio=1;historicoToken++;registrosHistorico=[];totalHistorico=0;paginaHistorico=1;paginaAuditoria=1;totalAuditoria=0;consultaAuditoriaToken++;$('loginPage').hidden=false;$('systemPage').hidden=true;$('logout').hidden=true;
+function exibirLogin(){v19StopIdle();usuarioAtual=null;perfilAtual=null;policiais=[];tipos=[];registros=[];averbacoes=[];erroView=null;editandoId=null;auditoria=[];v20EmailsUsuarios=new Map();$('v20AvisoAverbacao').hidden=true;relatorioToken++;registrosRelatorio=[];totalRelatorio=0;paginaRelatorio=1;historicoToken++;registrosHistorico=[];totalHistorico=0;paginaHistorico=1;paginaAuditoria=1;totalAuditoria=0;consultaAuditoriaToken++;$('loginPage').hidden=false;$('systemPage').hidden=true;$('logout').hidden=true;
   $('password').value='';
   document.querySelectorAll('#systemPage tbody').forEach(t=>t.replaceChildren());
   ['userInfo','recordsInfo','reportInfo','historyInfo','auditInfo','alertsSummary'].forEach(id=>{const el=$(id);if(el)el.textContent='';});
@@ -359,9 +384,32 @@ async function carregarDados(){
     $('avisoAverbacao').textContent=erroView
       ? 'Não foi possível consultar a view de averbações: '+(erroView.message||String(erroView))
       : 'Averbação indicativa: DM/LTSP por ciclo de 30 dias; a situação é do ciclo completo, não do evento individual. Os demais tipos são não aplicáveis.'+(averbacoesTruncadas?' Atenção: consulta de averbações atingiu o limite de 20.000 linhas.':'');
-    preencherSeletores();preencherFiltroRelatorio();preencherHistorico();atualizarPainel();mostrarAlertas();mostrarAgenda();mostrarRegistros();void consultarRelatorio();void consultarHistorico();
-    if(ehAdmin()) { await carregarAuditoria(); await carregarCadastros(); await carregarUsuarios(); }
+    preencherSeletores();preencherFiltroRelatorio();preencherHistorico();atualizarPainel();v20MostrarAvisoAverbacao();mostrarAlertas();mostrarAgenda();mostrarRegistros();void consultarRelatorio();void consultarHistorico();
+    if(ehAdmin()) { await Promise.all([carregarAuditoria(),carregarCadastros(),carregarUsuarios(),v20CarregarEmailsAuditoria()]); }
   }catch(error){console.error('Erro ao carregar dados:',error);$('recordsInfo').textContent='Erro ao consultar registros: '+erroAmigavel(error);}
+}
+function v20MostrarAvisoAverbacao(){
+  const aviso=$('v20AvisoAverbacao');aviso.replaceChildren();
+  if(erroView){aviso.hidden=true;return;}
+  const ciclos=new Map();
+  for(const a of averbacoes){
+    if(a.situacao_averbacao!=='AVERBAR')continue;
+    const chave=String(a.policial_id)+':'+String(a.numero_ciclo);
+    if(!ciclos.has(chave))ciclos.set(chave,a);
+  }
+  if(!ciclos.size){aviso.hidden=true;return;}
+  aviso.hidden=false;
+  const titulo=document.createElement('strong');titulo.textContent='⚠ Atenção: '+ciclos.size+' ciclo(s) com indicação de averbação';aviso.appendChild(titulo);
+  const resumo=document.createElement('p');resumo.textContent='Aviso indicativo com base na view atual de averbações. As regras de cálculo não foram alteradas.';aviso.appendChild(resumo);
+  const detalhes=[...ciclos.values()].slice(0,8);
+  for(const a of detalhes){
+    const p=policiais.find(x=>String(x.id)===String(a.policial_id));
+    const linha=document.createElement('p');
+    linha.textContent='• '+(p?`${p.matricula} · ${p.qra} · ${p.nome_completo}`:'Policial ID: '+a.policial_id)+' — ciclo '+formatarData(a.inicio_ciclo)+' a '+formatarData(a.fim_ciclo)+' ('+a.total_dias+' dias)';
+    aviso.appendChild(linha);
+  }
+  if(ciclos.size>8){const mais=document.createElement('p');mais.textContent='E mais '+(ciclos.size-8)+' ciclo(s). Consulte Registros para detalhes.';aviso.appendChild(mais);}
+  if(averbacoesTruncadas){const alerta=document.createElement('p');alerta.textContent='Atenção: limite de consulta atingido; o total pode estar incompleto.';aviso.appendChild(alerta);}
 }
 function preencherSeletores(){
   const p=$('policial'),t=$('tipo');p.replaceChildren(opcao('','Selecione o policial'));t.replaceChildren(opcao('','Selecione o tipo'));
@@ -506,13 +554,24 @@ function rotuloEventoAuditoria(a){
   const tipo=tipoEventoAuditoria(a);
   return ({INSERT:'INSERT',UPDATE:'UPDATE',CANCELAMENTO:'CANCELAMENTO',DELETE:'DELETE'})[tipo]||tipo;
 }
+let v20EmailsUsuarios=new Map();
+function v20EmailUsuario(id){return v20EmailsUsuarios.get(String(id??''))||String(id??'—');}
+async function v20CarregarEmailsAuditoria(){
+  if(!ehAdmin()||!usuarioAtual)return;
+  const idSessao=usuarioAtual.id;
+  const {data,error}=await db.rpc('v6_listar_usuarios');
+  if(!usuarioAtual||usuarioAtual.id!==idSessao)return;
+  if(error){console.warn('Não foi possível resolver e-mails da auditoria:',error);return;}
+  v20EmailsUsuarios=new Map((data||[]).filter(u=>u.id&&u.email).map(u=>[String(u.id),String(u.email)]));
+  mostrarAuditoria();
+}
 function auditoriaFiltrada(){
   const op=$('auditOperation').value.trim().toUpperCase();
   const termo=$('auditSearch').value.trim().toLowerCase();
   return auditoria.filter(a=>{
     const tipo=tipoEventoAuditoria(a);
     const correspondeOperacao=!op||tipo===op;
-    const correspondePesquisa=!termo||String(a.registro_id??'').toLowerCase().includes(termo)||String(a.usuario_id??'').toLowerCase().includes(termo);
+    const correspondePesquisa=!termo||String(a.registro_id??'').toLowerCase().includes(termo)||String(a.usuario_id??'').toLowerCase().includes(termo)||v20EmailUsuario(a.usuario_id).toLowerCase().includes(termo);
     return correspondeOperacao&&correspondePesquisa;
   });
 }
@@ -521,7 +580,7 @@ function mostrarAuditoria(){
   const dados=auditoriaFiltrada();
   for(const a of dados){
     const tr=document.createElement('tr');
-    [new Date(a.data_hora).toLocaleString('pt-BR'),rotuloEventoAuditoria(a),String(a.registro_id??''),a.usuario_id||''].forEach(v=>celula(tr,v));
+    [new Date(a.data_hora).toLocaleString('pt-BR'),rotuloEventoAuditoria(a),String(a.registro_id??''),v20EmailUsuario(a.usuario_id)].forEach(v=>celula(tr,v));
     tbody.appendChild(tr);
   }
   const contagem={INSERT:0,UPDATE:0,CANCELAMENTO:0};
@@ -534,8 +593,8 @@ function mostrarAuditoria(){
 }
 function exportarAuditoriaCsv(){
   if(!ehAdmin())return;
-  const linhas=[['Data/hora','Operação','Registro ID','Usuário ID']];
-  auditoriaFiltrada().forEach(a=>linhas.push([new Date(a.data_hora).toLocaleString('pt-BR'),rotuloEventoAuditoria(a),a.registro_id??'',a.usuario_id??'']));
+  const linhas=[['Data/hora','Operação','Registro ID','Usuário (e-mail ou ID)']];
+  auditoriaFiltrada().forEach(a=>linhas.push([new Date(a.data_hora).toLocaleString('pt-BR'),rotuloEventoAuditoria(a),a.registro_id??'',v20EmailUsuario(a.usuario_id)]));
   const escapar=v=>{let t=String(v??'');if(/^[\s]*[=+@-]/.test(t))t="'"+t;return '"'+t.replace(/"/g,'""')+'"';};
   const csv='\uFEFF'+linhas.map(l=>l.map(escapar).join(';')).join('\r\n');
   const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
@@ -959,7 +1018,14 @@ async function carregarCadastros(){
   renderizarCadastros();
 }
 function celula(tr,valor){const td=document.createElement('td');td.textContent=String(valor??'');tr.appendChild(td);return td;}
-function botaoAcao(td,rotulo,acao){const b=document.createElement('button');b.type='button';b.className='secondary mini';b.textContent=rotulo;b.addEventListener('click',acao);td.appendChild(b);}
+function botaoAcao(td,rotulo,acao){
+  const b=document.createElement('button');b.type='button';
+  const l=rotulo.toLowerCase();const remover=l==='desativar';
+  b.className='secondary mini v20-icon-action'+(remover?' v20-danger':'');
+  b.textContent=l==='editar'?'✎':remover?'🗑':l==='reativar'?'↻':rotulo;
+  b.title=rotulo+(remover?' (desativação lógica; histórico preservado)':'');
+  b.setAttribute('aria-label',b.title);b.addEventListener('click',acao);td.appendChild(b);
+}
 function renderizarCadastros(){
   const pb=$('admBodyPoliciais'),tb=$('admBodyTipos');pb.replaceChildren();tb.replaceChildren();
   for(const p of todosPoliciais){
@@ -1065,7 +1131,7 @@ async function carregarUsuarios(){
     const nome=document.createElement('input');nome.value=u.nome||'';nome.maxLength=160;nome.setAttribute('aria-label','Nome de '+u.email);tdNome.appendChild(nome);tr.appendChild(tdNome);
     const tdPerfil=document.createElement('td'),perfil=document.createElement('select');
     perfil.append(opcao('operador','Operador'),opcao('administrador','Administrador'));perfil.value=u.perfil;tdPerfil.appendChild(perfil);tr.appendChild(tdPerfil);
-    const tdAtivo=document.createElement('td'),ativo=document.createElement('input');ativo.type='checkbox';ativo.checked=u.ativo;ativo.style.width='auto';ativo.setAttribute('aria-label','Conta ativa: '+u.email);tdAtivo.appendChild(ativo);tr.appendChild(tdAtivo);
+    const tdAtivo=document.createElement('td'),ativo=document.createElement('input');ativo.type='checkbox';ativo.checked=u.ativo;ativo.style.width='16px';ativo.style.height='16px';ativo.setAttribute('aria-label','Conta ativa: '+u.email);tdAtivo.appendChild(ativo);tr.appendChild(tdAtivo);
     const tdAcao=document.createElement('td'),botao=document.createElement('button');botao.type='button';botao.className='secondary mini';botao.textContent='Salvar alterações';
     if(u.id===usuarioAtual?.id){perfil.disabled=true;ativo.disabled=true;botao.title='Seu próprio perfil pode ter apenas o nome alterado';}
     botao.addEventListener('click',async()=>{
@@ -1118,6 +1184,18 @@ function configurarNavegacaoV11(){
   },{passive:true});
 }
 configurarNavegacaoV11();
+// V20: preferência do menu limitada à aba atual; sem armazenar dados pessoais.
+(function configurarMenuV20(){
+  const sistema=$('systemPage'),botao=$('v20ToggleMenu');
+  function definir(fechado){
+    sistema.classList.toggle('menu-fechado',fechado);
+    botao.setAttribute('aria-expanded',String(!fechado));
+    botao.setAttribute('aria-label',fechado?'Expandir menu lateral':'Recolher menu lateral');
+    botao.title=fechado?'Expandir menu lateral':'Recolher menu lateral';
+  }
+  definir(window.innerWidth<=900);
+  botao.addEventListener('click',()=>definir(!sistema.classList.contains('menu-fechado')));
+})();
 async function iniciar(){
   const botao=$('loginButton');botao.disabled=true;
   try{
