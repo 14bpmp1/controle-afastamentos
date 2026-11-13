@@ -115,7 +115,7 @@
 <p class="alert-note" id="agendaInfo">Agenda calculada com base nos registros carregados. Não representa convocação ou confirmação de afastamento.</p>
 </section>
 <section class="panel v11-jump" id="v11Cadastro"><h2 id="formTitle">Novo afastamento</h2><p class="help" id="formHelp">Preencha os dados para cadastrar um afastamento fictício.</p><form id="afastamentoForm"><div class="grid">
-<div class="full"><label for="policial">Policial</label><select id="policial" required><option value="">Selecione...</option></select></div>
+<div class="full"><label for="policialBusca">Pesquisar policial por QRA, matrícula ou nome</label><input id="policialBusca" type="search" autocomplete="off" placeholder="Digite o QRA, matrícula ou nome..." aria-describedby="policialBuscaInfo"><small id="policialBuscaInfo" class="muted" role="status">Digite para filtrar a lista de policiais.</small><label for="policial">Policial</label><select id="policial" required><option value="">Selecione...</option></select></div>
 <div><label for="tipo">Tipo de afastamento</label><select id="tipo" required><option value="">Selecione...</option></select></div>
 <div><label for="dias">Quantidade de dias</label><input id="dias" type="number" min="1" max="3650" required></div>
 <div><label for="inicio">Data de início</label><input id="inicio" type="date" required></div>
@@ -386,9 +386,9 @@ async function carregarDados(){
     if(ehAdmin()) { await Promise.all([carregarAuditoria(),carregarCadastros(),carregarUsuarios(),v20CarregarEmailsAuditoria()]); }
   }catch(error){console.error('Erro ao carregar dados:',error);$('recordsInfo').textContent='Erro ao consultar registros: '+erroAmigavel(error);}
 }
-// V22: aviso pontual somente após a inclusão bem-sucedida de um afastamento.
+// V23: aviso pontual somente após a inclusão bem-sucedida de um afastamento.
 // Consulta a view existente sem alterar qualquer regra de averbação.
-async function v22AvisarAverbacaoAposCadastro(id, policialId){
+async function v23AvisarAverbacaoAposCadastro(id, policialId){
   try{
     const {data,error}=await db.from('vw_averbacoes')
       .select('afastamento_id,policial_id,numero_ciclo,inicio_ciclo,fim_ciclo,total_dias,situacao_averbacao')
@@ -404,14 +404,26 @@ async function v22AvisarAverbacaoAposCadastro(id, policialId){
     setMsg('formMessage','Registro salvo com sucesso, mas não foi possível verificar a indicação de averbação. Consulte a coluna Averbação nos registros.',true);
   }
 }
+function normalizarBuscaPolicial(texto){return String(texto||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLocaleLowerCase('pt-BR').trim();}
+function filtrarPoliciaisCadastro(){
+  const seletor=$('policial'),anterior=seletor.value,termo=normalizarBuscaPolicial($('policialBusca').value);
+  const encontrados=policiais.filter(p=>normalizarBuscaPolicial(`${p.matricula} ${p.qra} ${p.nome_completo}`).includes(termo));
+  seletor.replaceChildren(opcao('','Selecione o policial'));
+  encontrados.forEach(p=>seletor.appendChild(opcao(p.id,`${p.matricula} · ${p.qra} · ${p.nome_completo}`)));
+  if(encontrados.some(p=>String(p.id)===anterior))seletor.value=anterior;
+  $('policialBuscaInfo').textContent=`${encontrados.length} policial(is) encontrado(s). Selecione o cadastro correto na lista.`;
+}
 function preencherSeletores(){
-  const p=$('policial'),t=$('tipo');p.replaceChildren(opcao('','Selecione o policial'));t.replaceChildren(opcao('','Selecione o tipo'));
-  policiais.forEach(x=>p.appendChild(opcao(x.id,`${x.matricula} · ${x.qra} · ${x.nome_completo}`)));
+  const p=$('policial'),t=$('tipo'),policialAnterior=p.value;
+  t.replaceChildren(opcao('','Selecione o tipo'));
+  filtrarPoliciaisCadastro();
+  if([...p.options].some(o=>o.value===policialAnterior))p.value=policialAnterior;
   tipos.forEach(x=>t.appendChild(opcao(x.id,`${x.sigla} - ${x.descricao}`)));
   const filtro=$('filterPolicial'),selecionado=filtro.value;filtro.replaceChildren(opcao('','Todos'));
   policiais.forEach(x=>filtro.appendChild(opcao(x.id,`${x.matricula} · ${x.qra}`)));filtro.value=selecionado;
   const ft=$('filterTipo'),tipoAnterior=ft.value;ft.replaceChildren(opcao('','Todos'));tipos.forEach(x=>ft.appendChild(opcao(x.id,`${x.sigla} - ${x.descricao}`)));ft.value=tipoAnterior;
 }
+$('policialBusca').addEventListener('input',filtrarPoliciaisCadastro);
 function preencherFiltroRelatorio(){
   const p=$('reportPolicial'),t=$('reportTipo'),pv=p.value,tv=t.value;
   p.replaceChildren(opcao('','Todos'));t.replaceChildren(opcao('','Todos'));
@@ -425,6 +437,7 @@ function limparFormulario(){
   editandoId=null;
   $('afastamentoForm').reset();$('dias').readOnly=false;
   $('policial').disabled=false;
+  $('policialBusca').disabled=false;$('policialBusca').value='';filtrarPoliciaisCadastro();
   $('formTitle').textContent='Novo afastamento';
   $('formHelp').textContent='Preencha os dados para cadastrar um afastamento fictício.';
   $('saveButton').textContent='Salvar afastamento';
@@ -436,7 +449,9 @@ function editarRegistro(id){
   const r=registros.find(x=>String(x.id)===String(id));
   if(!r||r.cancelado_em)return;
   editandoId=r.id;
+  $('policialBusca').value='';filtrarPoliciaisCadastro();
   $('policial').value=String(r.policial_id);
+  $('policialBusca').disabled=true;
   $('policial').disabled=true; // Evita mover um afastamento para outro policial.
   $('tipo').value=String(r.tipo_id);
   $('inicio').value=r.data_inicio;
@@ -476,7 +491,7 @@ async function salvarAfastamento(){
     limparFormulario();
     setMsg('formMessage','Registro salvo com sucesso!');
     await carregarDados();
-    if(inclusaoNova)await v22AvisarAverbacaoAposCadastro(resultado.data[0].id,policial_id);
+    if(inclusaoNova)await v23AvisarAverbacaoAposCadastro(resultado.data[0].id,policial_id);
   }catch(error){console.error('Erro ao salvar:',error);setMsg('formMessage',error.code==='23P01'?'Já existe afastamento sobreposto para este policial.':'Não foi possível salvar: '+erroAmigavel(error),true);}
   finally{botao.disabled=false;}
 }
