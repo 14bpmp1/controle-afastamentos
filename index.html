@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Controle de Afastamentos V27 | 14º BPM</title>
+<title>V28 — Controle de Afastamentos V27 | 14º BPM</title>
 <style>
 :root{font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;color:#172b45;background:#f3f6fa}*{box-sizing:border-box}[hidden]{display:none!important}body{margin:0}header{background:#142f53;color:white;padding:17px 22px}.head{max-width:1150px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px}h1{font-size:20px;margin:0}header small{color:#c8d6e9}main{max-width:1150px;margin:24px auto;padding:0 15px}.panel,.stat{background:#fff;border:1px solid #dbe3ef;border-radius:13px;padding:19px;margin-bottom:17px}.login{max-width:420px;margin:60px auto}h2{font-size:19px;margin:0 0 15px}label{display:block;font-weight:600;font-size:13px;margin:12px 0 5px}input,select,textarea{width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:10px;min-height:41px;font:inherit;background:white;color:#172b45}textarea{resize:vertical}button{font:inherit;cursor:pointer;border-radius:8px;padding:10px 15px}button:disabled{opacity:.55;cursor:not-allowed}.primary{background:#1d4ed8;color:#fff;border:1px solid #1d4ed8}.secondary{background:#fff;color:#172b45;border:1px solid #cbd5e1}.login .primary{width:100%;margin-top:18px}.msg{font-size:13px;margin-top:12px;white-space:pre-wrap;overflow-wrap:anywhere}.msg.error{color:#b91c1c}.msg.ok{color:#15803d}.muted{color:#64748b;font-size:12px}.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}.toolbar h2{margin:0 0 4px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.stat{margin:0 0 17px}.stat span{color:#64748b;font-size:12px}.stat strong{display:block;font-size:27px;margin-top:5px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 15px}.full{grid-column:1/-1}.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:11px 9px;border-bottom:1px solid #e2e8f0;white-space:nowrap}th{background:#f8fafc}.tag{display:inline-block;background:#dbeafe;color:#1d4ed8;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700}.tag.done{background:#e2e8f0;color:#475569}.tag.cancel{background:#fee2e2;color:#991b1b}.tag.soon{background:#ffedd5;color:#9a3412}.filter-row{display:flex;gap:12px;align-items:end;flex-wrap:wrap}.filter-row>div{flex:1;min-width:220px}@media(max-width:720px){.stats{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.full{grid-column:auto}.panel{padding:14px}h1{font-size:16px}.stat{padding:12px}}
 .tag.av{background:#fef3c7;color:#92400e}.tag.noav{background:#f1f5f9;color:#475569}.filter-row>div{min-width:170px}.summary{font-size:12px;color:#475569;margin:8px 0}.warning{color:#9a3412;font-size:12px}.danger{background:#b91c1c;color:white;border:1px solid #b91c1c}.mini{padding:5px 9px;font-size:12px}.admin-box{border-left:4px solid #1d4ed8}.subtle{background:#f8fafc}.edit-actions{display:flex;gap:5px}.help{font-size:12px;color:#64748b;margin:8px 0}
@@ -94,6 +94,7 @@
     <a href="#reportPanel" title="Relatórios"><span class="v20-menu-icon" aria-hidden="true">▥</span><span class="v20-menu-label">Relatórios</span></a>
     <a class="v11-admin-link" href="#cadastrosPanel" hidden title="Cadastros"><span class="v20-menu-icon" aria-hidden="true">♙</span><span class="v20-menu-label">Cadastros</span></a>
     <a class="v11-admin-link" href="#usuariosPanel" hidden title="Usuários"><span class="v20-menu-icon" aria-hidden="true">♙</span><span class="v20-menu-label">Usuários</span></a>
+    <a class="v11-admin-link" href="#securityPanel" hidden title="Segurança"><span class="v20-menu-icon" aria-hidden="true">♧</span><span class="v20-menu-label">Segurança</span></a>
     <a class="v11-admin-link" href="#auditPanel" hidden title="Auditoria"><span class="v20-menu-icon" aria-hidden="true">☑</span><span class="v20-menu-label">Auditoria</span></a>
   </div>
 </nav>
@@ -123,6 +124,24 @@
 <div class="full"><label for="observacoes">Observações</label><textarea id="observacoes" rows="2" placeholder="Somente informações fictícias"></textarea></div>
 </div><div class="actions"><button class="primary" id="saveButton" type="submit">Salvar afastamento</button><button class="secondary" id="clearButton" type="button">Limpar</button><button class="secondary" id="cancelEditButton" type="button" hidden>Cancelar edição</button></div><div class="msg" id="formMessage" role="status"></div></form></section>
 <section class="panel v11-jump" id="v11Registros"><div class="toolbar"><h2>Registros de afastamentos</h2><button class="secondary" id="exportCsv" type="button">Exportar CSV (Excel)</button></div><div class="filter-row"><div><label for="filterText">Pesquisar</label><input id="filterText" type="search" placeholder="Matrícula, QRA, nome ou tipo..."></div><div><label for="filterPolicial">Policial</label><select id="filterPolicial"><option value="">Todos</option></select></div><div><label for="filterMes">Mês de início</label><input id="filterMes" type="month"></div><div><label for="filterAverbacao">Averbação</label><select id="filterAverbacao"><option value="">Todas</option><option value="AVERBAR">Averbar</option><option value="NAO AVERBAR">Não averbar</option><option value="NAO APLICAVEL">Não aplicável</option></select></div><div><label for="filterTipo">Tipo de afastamento</label><select id="filterTipo"><option value="">Todos</option></select></div><div><label for="filterInicio">Início do período</label><input type="date" id="filterInicio"></div><div><label for="filterFim">Fim do período</label><input type="date" id="filterFim"></div><div><label for="filterSituacao">Situação</label><select id="filterSituacao"><option value="">Todas</option><option value="Ativo">Ativo</option><option value="Futuro">Futuro</option><option value="Encerrado">Encerrado</option><option value="Cancelado">Cancelado</option></select></div></div><div class="actions"><button class="secondary" type="button" id="filterClear">Limpar filtros de registros</button></div><p class="summary" id="avisoAverbacao">Averbação calculada para DM e LTSP, conforme a view de testes.</p><div class="table-wrap" style="margin-top:15px"><table><thead><tr><th>Matrícula</th><th>QRA</th><th>Policial</th><th>Tipo</th><th>Início</th><th>Término</th><th>Dias</th><th>Situação</th><th>Averbação</th><th>Dias no ciclo</th><th>Período do ciclo</th><th id="actionsHeader" hidden>Ações (admin)</th></tr></thead><tbody id="recordsBody"></tbody></table></div><p class="muted" id="recordsInfo"></p><div class="actions" id="recordsPagination"><button class="secondary" type="button" id="recordsPrev">Anterior</button><span id="recordsPageInfo" class="muted" style="align-self:center"></span><button class="secondary" type="button" id="recordsNext">Próxima</button></div></section>
+
+<section class="panel admin-box v11-jump" id="securityPanel" hidden>
+<h2>Segurança e preparação para dados reais — V28</h2>
+<p class="help">Este painel oferece verificações locais e um roteiro de homologação. Ele NÃO testa automaticamente as políticas RLS, as permissões SQL, a criptografia do servidor nem a disponibilidade de backups. Execute a consulta SQL de diagnóstico no painel do Supabase e solicite revisão institucional antes de usar dados reais.</p>
+<div class="actions"><button type="button" class="secondary" id="securityCheck">Verificar sessão e configuração local</button><button type="button" class="secondary" id="securityCopy">Copiar checklist de homologação</button></div>
+<div class="msg" id="securityResult" role="status" aria-live="polite"></div>
+<h3>Checklist antes da importação real</h3>
+<div style="display:grid;gap:10px">
+<label><input type="checkbox" class="securityItem"> Autorização institucional para uso de dados reais obtida</label>
+<label><input type="checkbox" class="securityItem"> RLS e políticas de SELECT/INSERT/UPDATE/DELETE revisadas no Supabase</label>
+<label><input type="checkbox" class="securityItem"> Testes com conta operador e conta administrador concluídos</label>
+<label><input type="checkbox" class="securityItem"> Acesso anônimo ao banco negado em testes controlados</label>
+<label><input type="checkbox" class="securityItem"> Backup disponível e procedimento de restauração testado</label>
+<label><input type="checkbox" class="securityItem"> Política de retenção, privacidade e acesso aprovada</label>
+</div>
+<p class="muted" id="securityChecklistStatus">0 de 6 itens conferidos nesta sessão. As marcações não são salvas nem representam auditoria.</p>
+<p class="help">Não cole chaves secretas no HTML. A chave pública (sb_publishable_) pode ser exposta, mas o banco deve exigir autenticação e autorização por RLS. Evite inserir dados reais até finalizar a homologação.</p>
+</section>
 
 <section class="panel" id="historyPanel" class="v11-jump">
   <h2>Histórico individual do policial</h2>
@@ -319,6 +338,8 @@ $('v19TimeoutOverlay').addEventListener('keydown',e=>{
 function exibirLogin(){v19StopIdle();usuarioAtual=null;perfilAtual=null;policiais=[];tipos=[];registros=[];averbacoes=[];erroView=null;editandoId=null;auditoria=[];v20EmailsUsuarios=new Map();relatorioToken++;registrosRelatorio=[];totalRelatorio=0;paginaRelatorio=1;historicoToken++;registrosHistorico=[];totalHistorico=0;paginaHistorico=1;paginaAuditoria=1;totalAuditoria=0;consultaAuditoriaToken++;$('loginPage').hidden=false;$('systemPage').hidden=true;$('logout').hidden=true;
   $('password').value='';
   document.querySelectorAll('#systemPage tbody').forEach(t=>t.replaceChildren());
+  document.querySelectorAll('.securityItem').forEach(x=>x.checked=false);
+  $('securityResult').textContent='';$('securityChecklistStatus').textContent='0 de 6 itens conferidos nesta sessão.';
   ['userInfo','recordsInfo','reportInfo','historyInfo','auditInfo','alertsSummary'].forEach(id=>{const el=$(id);if(el)el.textContent='';});
   $('afastamentoForm').reset();
 }
@@ -339,6 +360,7 @@ async function verificarSessao(){
   $('auditPanel').hidden=!ehAdmin();
   $('cadastrosPanel').hidden=!ehAdmin();
   $('usuariosPanel').hidden=!ehAdmin();
+  $('securityPanel').hidden=!ehAdmin();
   await carregarDados();
 }
 async function entrar(){
@@ -1355,6 +1377,29 @@ async function iniciar(){
   }catch(error){console.error('Erro de inicialização:',error);setMsg('loginMessage','Erro de configuração: '+erroAmigavel(error),true);}
   finally{botao.disabled=!db?.auth;botao.textContent='Entrar';}
 }
+// V28: conferência local e checklist administrativo; não substitui auditoria de banco.
+const securityChecklistText=`Homologação de segurança — Controle de Afastamentos 14º BPM\n[ ] Autorização institucional\n[ ] RLS e políticas revisadas\n[ ] Testes com operador e administrador\n[ ] Acesso anônimo negado\n[ ] Backup e restauração testados\n[ ] Política de retenção e privacidade aprovada`;
+$('securityCheck').addEventListener('click',async()=>{
+  if(!ehAdmin()||!db){$('securityResult').textContent='Acesso restrito.';return;}
+  const itens=[];
+  itens.push(SUPABASE_KEY.startsWith('sb_publishable_')?'Chave: publishable identificada.':'Chave: verifique se é publishable/anon; nunca use secret/service_role.');
+  const {data,error}=await db.auth.getUser();
+  itens.push(!error&&data?.user?.id===usuarioAtual?.id?'Sessão autenticada: confirmada.':'Sessão autenticada: não confirmada.');
+  itens.push(perfilAtual?.ativo&&perfilAtual?.perfil==='administrador'?'Perfil administrativo local: identificado.':'Perfil administrativo local: não confirmado.');
+  itens.push('RLS, privilégios, backups e criptografia do servidor: NÃO verificados por este painel.');
+  $('securityResult').textContent=itens.join(' | ');
+});
+$('securityCopy').addEventListener('click',async()=>{
+  if(!ehAdmin())return;
+  try{await navigator.clipboard.writeText(securityChecklistText);$('securityResult').textContent='Checklist copiado.';}
+  catch(e){$('securityResult').textContent='Não foi possível copiar automaticamente. Use o checklist exibido.';}
+});
+document.querySelectorAll('.securityItem').forEach(el=>el.addEventListener('change',()=>{
+  const total=document.querySelectorAll('.securityItem').length;
+  const checked=document.querySelectorAll('.securityItem:checked').length;
+  $('securityChecklistStatus').textContent=`${checked} de ${total} itens conferidos nesta sessão. As marcações não são salvas nem representam auditoria.`;
+}));
+
 void iniciar();
 </script>
 </body>
