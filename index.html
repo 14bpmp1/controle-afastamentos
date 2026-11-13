@@ -115,7 +115,7 @@
 <p class="alert-note" id="agendaInfo">Agenda calculada com base nos registros carregados. Não representa convocação ou confirmação de afastamento.</p>
 </section>
 <section class="panel v11-jump" id="v11Cadastro"><h2 id="formTitle">Novo afastamento</h2><p class="help" id="formHelp">Preencha os dados para cadastrar um afastamento fictício.</p><form id="afastamentoForm"><div class="grid">
-<div class="full"><label for="policialBusca">Pesquisar policial por QRA, matrícula ou nome</label><input id="policialBusca" type="search" autocomplete="off" placeholder="Digite o QRA, matrícula ou nome..." aria-describedby="policialBuscaInfo"><small id="policialBuscaInfo" class="muted" role="status">Digite para filtrar a lista de policiais.</small><label for="policial">Policial</label><select id="policial" required><option value="">Selecione...</option></select></div>
+<div class="full"><label for="policialBusca">QRA, matrícula ou nome do policial</label><input id="policialBusca" type="search" autocomplete="off" placeholder="Digite para identificar automaticamente o policial..." aria-describedby="policialBuscaInfo"><small id="policialBuscaInfo" class="muted" role="status">Digite para filtrar a lista de policiais.</small><label for="policial">Policial</label><select id="policial" required><option value="">Selecione...</option></select></div>
 <div><label for="tipo">Tipo de afastamento</label><select id="tipo" required><option value="">Selecione...</option></select></div>
 <div><label for="dias">Quantidade de dias</label><input id="dias" type="number" min="1" max="3650" required></div>
 <div><label for="inicio">Data de início</label><input id="inicio" type="date" required></div>
@@ -386,9 +386,9 @@ async function carregarDados(){
     if(ehAdmin()) { await Promise.all([carregarAuditoria(),carregarCadastros(),carregarUsuarios(),v20CarregarEmailsAuditoria()]); }
   }catch(error){console.error('Erro ao carregar dados:',error);$('recordsInfo').textContent='Erro ao consultar registros: '+erroAmigavel(error);}
 }
-// V23: aviso pontual somente após a inclusão bem-sucedida de um afastamento.
+// V25: aviso pontual somente após a inclusão bem-sucedida de um afastamento.
 // Consulta a view existente sem alterar qualquer regra de averbação.
-async function v23AvisarAverbacaoAposCadastro(id, policialId){
+async function v25AvisarAverbacaoAposCadastro(id, policialId){
   try{
     const {data,error}=await db.from('vw_averbacoes')
       .select('afastamento_id,policial_id,numero_ciclo,inicio_ciclo,fim_ciclo,total_dias,situacao_averbacao')
@@ -404,15 +404,31 @@ async function v23AvisarAverbacaoAposCadastro(id, policialId){
     setMsg('formMessage','Registro salvo com sucesso, mas não foi possível verificar a indicação de averbação. Consulte a coluna Averbação nos registros.',true);
   }
 }
-function normalizarBuscaPolicial(texto){return String(texto||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLocaleLowerCase('pt-BR').trim();}
+function normalizarBuscaPolicial(texto){return String(texto||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR').trim();}
 function filtrarPoliciaisCadastro(){
-  const seletor=$('policial'),anterior=seletor.value,termo=normalizarBuscaPolicial($('policialBusca').value);
-  const encontrados=policiais.filter(p=>normalizarBuscaPolicial(`${p.matricula} ${p.qra} ${p.nome_completo}`).includes(termo));
+  const seletor=$('policial'),campo=$('policialBusca'),termo=normalizarBuscaPolicial(campo.value);
+  const anterior=seletor.value;
+  const encontrados=policiais.filter(p=>[p.matricula,p.qra,p.nome_completo].some(v=>normalizarBuscaPolicial(v).includes(termo)));
+  const exatos=termo?encontrados.filter(p=>[p.matricula,p.qra,p.nome_completo].some(v=>normalizarBuscaPolicial(v)===termo)):[];
   seletor.replaceChildren(opcao('','Selecione o policial'));
   encontrados.forEach(p=>seletor.appendChild(opcao(p.id,`${p.matricula} · ${p.qra} · ${p.nome_completo}`)));
-  if(encontrados.some(p=>String(p.id)===anterior))seletor.value=anterior;
-  $('policialBuscaInfo').textContent=`${encontrados.length} policial(is) encontrado(s). Selecione o cadastro correto na lista.`;
+  // Seleciona automaticamente apenas quando a identificação não é ambígua.
+  const identificado=exatos.length===1?exatos[0]:encontrados.length===1&&termo?encontrados[0]:null;
+  if(identificado)seletor.value=String(identificado.id);
+  else if(!termo && encontrados.some(p=>String(p.id)===anterior))seletor.value=anterior;
+  else seletor.value='';
+  const info=$('policialBuscaInfo');
+  if(identificado){
+    info.textContent=`✓ Policial identificado: ${identificado.qra} — ${identificado.nome_completo} | Matrícula: ${identificado.matricula}.`;
+  }else if(!termo){
+    info.textContent=`${policiais.length} policiais disponíveis. Digite o QRA, matrícula ou nome.`;
+  }else if(!encontrados.length){
+    info.textContent='Nenhum policial encontrado. Verifique os dados digitados.';
+  }else{
+    info.textContent=`${encontrados.length} correspondências. Continue digitando ou escolha o policial na lista abaixo.`;
+  }
 }
+
 function preencherSeletores(){
   const p=$('policial'),t=$('tipo'),policialAnterior=p.value;
   t.replaceChildren(opcao('','Selecione o tipo'));
@@ -491,7 +507,7 @@ async function salvarAfastamento(){
     limparFormulario();
     setMsg('formMessage','Registro salvo com sucesso!');
     await carregarDados();
-    if(inclusaoNova)await v23AvisarAverbacaoAposCadastro(resultado.data[0].id,policial_id);
+    if(inclusaoNova)await v25AvisarAverbacaoAposCadastro(resultado.data[0].id,policial_id);
   }catch(error){console.error('Erro ao salvar:',error);setMsg('formMessage',error.code==='23P01'?'Já existe afastamento sobreposto para este policial.':'Não foi possível salvar: '+erroAmigavel(error),true);}
   finally{botao.disabled=false;}
 }
