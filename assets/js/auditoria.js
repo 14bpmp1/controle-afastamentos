@@ -5,9 +5,10 @@ const AUDITORIA_POR_PAGINA=100;
 let paginaAuditoria=1,totalAuditoria=0,consultaAuditoriaToken=0;
 async function carregarAuditoria(){
   if(!ehAdmin())return;
-  const token=++consultaAuditoriaToken;
+  const token=++consultaAuditoriaToken,contexto=contextoConsulta();
+  iniciarConsultaTela('auditoria');
   const ini=$('auditStart').value,fim=$('auditEnd').value;
-  if(ini&&fim&&ini>fim){$('auditInfo').textContent='A data inicial não pode ser posterior à final.';return;}
+  if(ini&&fim&&ini>fim){$('auditInfo').textContent='A data inicial não pode ser posterior à final.';concluirConsultaTela('auditoria',false);return;}
   $('auditInfo').textContent='Consultando página '+paginaAuditoria+' da auditoria...';
   $('auditPrev').disabled=true;$('auditNext').disabled=true;
   let q=db.from('auditoria')
@@ -19,8 +20,9 @@ async function carregarAuditoria(){
   if(ini)q=q.gte('data_hora',ini+'T00:00:00');
   if(fim)q=q.lt('data_hora',somarDias(fim,1)+'T00:00:00');
   const {data,error,count}=await q;
-  if(token!==consultaAuditoriaToken)return;
+  if(!contexto()||token!==consultaAuditoriaToken)return;
   if(error){
+    concluirConsultaTela('auditoria',false);
     console.error('Erro de auditoria:',error);
     auditoria=[];totalAuditoria=0;mostrarAuditoria();
     $('auditInfo').textContent='Auditoria indisponível: '+erroAmigavel(error);
@@ -30,7 +32,7 @@ async function carregarAuditoria(){
   // Se os últimos registros foram removidos por manutenção, retorna à página válida.
   const ultima=Math.max(1,Math.ceil(totalAuditoria/AUDITORIA_POR_PAGINA));
   if(paginaAuditoria>ultima){paginaAuditoria=ultima;await carregarAuditoria();return;}
-  mostrarAuditoria();
+  mostrarAuditoria();concluirConsultaTela('auditoria');
 }
 function operacaoOriginalAuditoria(a){
   // O banco pode registrar operacoes em portugues (INCLUSAO/ALTERACAO)
@@ -46,8 +48,8 @@ function operacaoOriginalAuditoria(a){
 }
 function ehCancelamentoAuditoria(a){
   if(operacaoOriginalAuditoria(a)!=='UPDATE')return false;
-  const anterior=a.dados_anteriores?.cancelado_em ?? null;
-  const posterior=a.dados_novos?.cancelado_em ?? null;
+  const anterior=snapshotAuditoria(a.dados_anteriores)?.cancelado_em ?? null;
+  const posterior=snapshotAuditoria(a.dados_novos)?.cancelado_em ?? null;
   return !anterior && Boolean(posterior);
 }
 function tipoEventoAuditoria(a){
@@ -61,9 +63,9 @@ let v20EmailsUsuarios=new Map();
 function v20EmailUsuario(id){return v20EmailsUsuarios.get(String(id??''))||String(id??'—');}
 async function v20CarregarEmailsAuditoria(){
   if(!ehAdmin()||!usuarioAtual)return;
-  const idSessao=usuarioAtual.id;
+  const idSessao=usuarioAtual.id,contexto=contextoConsulta();
   const {data,error}=await db.rpc('v6_listar_usuarios');
-  if(!usuarioAtual||usuarioAtual.id!==idSessao)return;
+  if(!contexto()||!usuarioAtual||usuarioAtual.id!==idSessao)return;
   if(error){console.warn('Não foi possível resolver e-mails da auditoria:',error);return;}
   v20EmailsUsuarios=new Map((data||[]).filter(u=>u.id&&u.email).map(u=>[String(u.id),String(u.email)]));
   mostrarAuditoria();
@@ -79,12 +81,15 @@ function auditoriaFiltrada(){
   });
 }
 function mostrarAuditoria(){
+  if(!ehAdmin())return;
   const tbody=$('auditBody');tbody.replaceChildren();
   const dados=auditoriaFiltrada();
   for(const a of dados){
-    const tr=document.createElement('tr');
-    [new Date(a.data_hora).toLocaleString('pt-BR'),rotuloEventoAuditoria(a),String(a.registro_id??''),v20EmailUsuario(a.usuario_id)].forEach(v=>celula(tr,v));
+    const tr=document.createElement('tr');tr.className='audit-event';
+    [formatarDataHoraBrasilia(a.data_hora),rotuloEventoAuditoria(a),String(a.registro_id??''),v20EmailUsuario(a.usuario_id)].forEach(v=>celula(tr,v));
     tbody.appendChild(tr);
+    const detalhes=document.createElement('tr');detalhes.className='audit-event-details';detalhes.dataset.eventoId=String(a.id);
+    const td=celula(detalhes,'');td.colSpan=4;renderizarDetalhesAuditoria(td,a);tbody.appendChild(detalhes);
   }
   const contagem={INSERT:0,UPDATE:0,CANCELAMENTO:0};
   auditoria.forEach(a=>{const op=tipoEventoAuditoria(a);if(Object.hasOwn(contagem,op))contagem[op]++;});
@@ -96,12 +101,14 @@ function mostrarAuditoria(){
 }
 function exportarAuditoriaCsv(){
   if(!ehAdmin())return;
-  const linhas=[['Data/hora','Operação','Registro ID','Usuário (e-mail ou ID)']];
-  auditoriaFiltrada().forEach(a=>linhas.push([new Date(a.data_hora).toLocaleString('pt-BR'),rotuloEventoAuditoria(a),a.registro_id??'',v20EmailUsuario(a.usuario_id)]));
-  const escapar=v=>{let t=String(v??'');if(/^[\s]*[=+@-]/.test(t))t="'"+t;return '"'+t.replace(/"/g,'""')+'"';};
-  const csv='\uFEFF'+linhas.map(l=>l.map(escapar).join(';')).join('\r\n');
-  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
-  const a=document.createElement('a');a.href=url;a.download='auditoria_afastamentos_'+hojeISO()+'.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  const linhas=[['Data/hora (Brasília)','Operação','Registro ID','Usuário (e-mail ou ID)','Campo','Valor anterior','Valor novo']];
+  for(const evento of auditoriaFiltrada()){
+    const base=[formatarDataHoraBrasilia(evento.data_hora),rotuloEventoAuditoria(evento),evento.registro_id??'',v20EmailUsuario(evento.usuario_id)];
+    const comparacao=alteracoesAuditoria(evento);
+    if(!comparacao.itens.length)linhas.push([...base,'',comparacao.mensagem,'']);
+    else for(const item of comparacao.itens)linhas.push([...base,item.rotulo,item.anterior,item.novo]);
+  }
+  baixarCsv(linhas,'auditoria_afastamentos_'+hojeISO()+'.csv');
 }
 $('auditReload').addEventListener('click',()=>{paginaAuditoria=1;void carregarAuditoria();});
 $('auditClear').addEventListener('click',()=>{['auditStart','auditEnd','auditOperation','auditSearch'].forEach(id=>$(id).value='');paginaAuditoria=1;void carregarAuditoria();});

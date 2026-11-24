@@ -78,7 +78,8 @@ function exibirLogin(){v19StopIdle();usuarioAtual=null;perfilAtual=null;policiai
   document.querySelectorAll('.securityItem').forEach(x=>x.checked=false);
   $('securityResult').textContent='';$('securityChecklistStatus').textContent='0 de 6 itens conferidos nesta sessão.';
   ['userInfo','recordsInfo','reportInfo','historyInfo','auditInfo','alertsSummary'].forEach(id=>{const el=$(id);if(el)el.textContent='';});
-  $('afastamentoForm').reset();
+  $('afastamentoForm').reset();$('policialAdminForm').reset();$('tipoAdminForm').reset();
+  reiniciarProtecaoFormularios();limparUltimasConsultas();
 }
 function erroAmigavel(error){const codigo=error?.code||'';const msg=error?.message||String(error);if(codigo==='invalid_credentials'||/Invalid login credentials/i.test(msg))return 'E-mail ou senha incorretos. Confira a conta criada em Authentication → Users.';if(codigo==='email_not_confirmed'||/Email not confirmed/i.test(msg))return 'E-mail ainda não confirmado no Supabase.';if(/Invalid API key/i.test(msg))return 'Chave pública inválida. Confira a Publishable key do mesmo projeto.';return msg;}
 async function verificarSessao(){
@@ -109,6 +110,7 @@ async function entrar(){
   finally{botao.disabled=!db?.auth;botao.textContent='Entrar';}
 }
 async function sair(){
+  if(!confirmarDescarte())return;
   v19StopIdle();exibirLogin();
   try{if(db)await db.auth.signOut();setMsg('loginMessage','Sessão encerrada.');}
   catch(e){console.error(e);setMsg('loginMessage','A tela foi encerrada, mas o logout no servidor não foi confirmado. Verifique sua conexão.',true);}

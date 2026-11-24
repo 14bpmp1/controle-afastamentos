@@ -92,3 +92,17 @@ table{font-size:14px}
   #completePrint tr{break-inside:avoid;page-break-inside:avoid}
   #completePrint th,#completePrint td{white-space:normal;overflow-wrap:anywhere;padding:5px;vertical-align:top}
 }
+
+.unsaved-notice{padding:12px 14px;margin:0 0 16px;border:1px solid #fcd34d;border-radius:8px;background:#fffbeb;color:#78350f;font-size:14px;line-height:1.5}
+#lastUpdate{margin:6px 0 0;line-height:1.5}
+.period-shortcuts{margin:12px 0 18px}
+.audit-details-cell{white-space:normal;min-width:260px}
+.audit-change-details summary{cursor:pointer;color:#1d4ed8;font-weight:600;padding:5px 0}
+.audit-change-details p{max-width:35rem;line-height:1.5}
+.audit-diff{margin:10px 0;min-width:360px;table-layout:fixed}
+.audit-diff th,.audit-diff td{white-space:pre-wrap;overflow-wrap:anywhere;vertical-align:top}
+.audit-diff th:first-child,.audit-diff td:first-child{width:26%}
+@media print{#unsavedNotice,#lastUpdate,.period-shortcuts{display:none!important}}
+.audit-event-details>td{padding-top:0;background:#f8fafc;border-bottom:2px solid #dbe3ef}
+.audit-event-details .audit-change-details summary{padding:8px 0}
+.audit-event-details .audit-diff{background:#fff}

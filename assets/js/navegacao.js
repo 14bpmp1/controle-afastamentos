@@ -74,6 +74,7 @@ function renderizarRota({ carregar = true, foco = false } = {}) {
     else link.removeAttribute('aria-current');
   });
   $('pageTitle').textContent = tela.titulo;
+  mostrarUltimaConsulta();
   document.title = tela.titulo + ' | Controle de Afastamentos — 14º BPM';
   $('moduleMessage').hidden = true;
   $('v11Top').hidden = true;

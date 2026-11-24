@@ -83,6 +83,7 @@ let painelToken = 0, alertasToken = 0, agendaToken = 0;
 async function carregarListaPeriodo(tipo) {
   const ehAlerta = tipo === 'alerts', token = ehAlerta ? ++alertasToken : ++agendaToken;
   const contexto = contextoConsulta(), valida = () => contexto() && token === (ehAlerta ? alertasToken : agendaToken);
+  const fonte=ehAlerta?'alertas':'agenda';iniciarConsultaTela(fonte);
   const h = hojeISO(), limite = somarDias(h, Number($(tipo+'Window').value));
   $(tipo+'Csv').disabled = true; $(tipo+'Body').replaceChildren(); $(tipo+'Summary').replaceChildren();
   $(tipo+'Info').textContent = 'Consultando período...';
@@ -94,17 +95,19 @@ async function carregarListaPeriodo(tipo) {
     }, lote=>dados.push(...lote), valida);
     conferirConsulta(valida);
     if (ehAlerta) { dadosAlertas=dados; mostrarAlertas(); } else { dadosAgenda=dados; mostrarAgenda(); }
-    $(tipo+'Csv').disabled = !dados.length;
+    $(tipo+'Csv').disabled = !dados.length;concluirConsultaTela(fonte);return true;
   } catch (error) {
     if (!valida() || error.name==='AbortError') return;
     if (ehAlerta) dadosAlertas=[]; else dadosAgenda=[];
-    $(tipo+'Info').textContent = 'Não foi possível consultar o período: ' + erroAmigavel(error);
+    concluirConsultaTela(fonte,false);
+    $(tipo+'Info').textContent = 'Não foi possível consultar o período: ' + erroAmigavel(error);return false;
   }
 }
 function carregarAlertas() { return carregarListaPeriodo('alerts'); }
 function carregarAgenda() { return carregarListaPeriodo('agenda'); }
 async function carregarPainel() {
   const token = ++painelToken, contexto = contextoConsulta(), valida = () => contexto() && token === painelToken && rotaAtual === 'painel';
+  iniciarConsultaTela('painel');
   const h=hojeISO();
   $('statPoliciais').textContent=policiais.length;
   for(const id of ['statAtivos','statProximos','statEncerrados','statAverbacoes'])$(id).textContent='—';
@@ -130,6 +133,7 @@ async function carregarPainel() {
     ['statAtivos','statProximos','statEncerrados'].forEach((id,i)=>$(id).textContent=contagens.value[i]);
   }
   if(ciclos.status==='fulfilled')$('statAverbacoes').textContent=ciclos.value;
+  concluirConsultaTela('painel',contagens.status==='fulfilled'&&ciclos.status==='fulfilled'&&contagens.value[3]===true);
   $('panelInfo').textContent = contagens.status==='rejected'
     ? 'Indicadores indisponíveis: '+erroAmigavel(contagens.reason)
     : ciclos.status==='rejected' ? 'Contagens de afastamentos atualizadas. Não foi possível consultar os ciclos de averbação.'

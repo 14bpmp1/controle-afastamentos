@@ -4,6 +4,7 @@
 async function carregarCadastros(){
   if(!ehAdmin())return;
   const valida=contextoConsulta(), pessoas=[], categorias=[];
+  iniciarConsultaTela('cadastros');
   try{
     await Promise.all([
       percorrerPorId(()=>db.from('policiais').select('id,matricula,posto_graduacao,qra,nome_completo,ativo'),lote=>pessoas.push(...lote),valida),
@@ -12,9 +13,10 @@ async function carregarCadastros(){
     conferirConsulta(valida);
     todosPoliciais=pessoas.sort((a,b)=>a.matricula.localeCompare(b.matricula,'pt-BR'));
     todosTipos=categorias.sort((a,b)=>a.sigla.localeCompare(b.sigla,'pt-BR'));
-    renderizarCadastros();
+    renderizarCadastros();concluirConsultaTela('cadastros');
   }catch(error){
     if(!valida()||error.name==='AbortError')return;
+    concluirConsultaTela('cadastros',false);
     setMsg('admMsgPolicial','Não foi possível consultar os cadastros: '+erroAmigavel(error),true);
   }
 }
@@ -46,20 +48,24 @@ function renderizarCadastros(){
     tb.appendChild(tr);
   }
 }
-function limparPolicialAdmin(){editPolicialId=null;$('policialAdminForm').reset();$('policialFormTitle').textContent='Cadastrar policial fictício';$('admMsgPolicial').textContent='';}
-function limparTipoAdmin(){editTipoId=null;$('tipoAdminForm').reset();$('tipoFormTitle').textContent='Cadastrar tipo de afastamento';$('admMsgTipo').textContent='';}
+function limparPolicialAdmin({forcar=false}={}){if(!forcar&&!confirmarDescarte('policialAdminForm'))return;editPolicialId=null;$('policialAdminForm').reset();$('policialFormTitle').textContent='Cadastrar policial fictício';$('admMsgPolicial').textContent='';registrarFormularioSalvo('policialAdminForm');}
+function limparTipoAdmin({forcar=false}={}){if(!forcar&&!confirmarDescarte('tipoAdminForm'))return;editTipoId=null;$('tipoAdminForm').reset();$('tipoFormTitle').textContent='Cadastrar tipo de afastamento';$('admMsgTipo').textContent='';registrarFormularioSalvo('tipoAdminForm');}
 function editarPolicialAdmin(id){
   const p=todosPoliciais.find(x=>x.id===id);if(!p)return;
+  if(!confirmarDescarte('policialAdminForm'))return;
   editPolicialId=id;$('admMatricula').value=p.matricula;$('admPosto').value=p.posto_graduacao;
   $('admQra').value=p.qra;$('admNome').value=p.nome_completo;
   $('policialFormTitle').textContent='Editar policial '+p.matricula;
+  registrarFormularioSalvo('policialAdminForm');
   $('cadastrosPanel').scrollIntoView({behavior:'smooth',block:'start'});
 }
 function editarTipoAdmin(id){
   const t=todosTipos.find(x=>x.id===id);if(!t)return;
+  if(!confirmarDescarte('tipoAdminForm'))return;
   editTipoId=id;$('admSigla').value=t.sigla;$('admDescricao').value=t.descricao;
   $('admDiasFixos').value=t.dias_fixos??'';
   $('tipoFormTitle').textContent='Editar tipo '+t.sigla;
+  registrarFormularioSalvo('tipoAdminForm');
   $('cadastrosPanel').scrollIntoView({behavior:'smooth',block:'start'});
 }
 async function salvarPolicialAdmin(){
@@ -72,7 +78,7 @@ async function salvarPolicialAdmin(){
       ?await db.from('policiais').update(obj).eq('id',editPolicialId).select('id').single()
       :await db.from('policiais').insert(obj).select('id').single();
     if(res.error)throw res.error;
-    limparPolicialAdmin();await carregarDados();setMsg('admMsgPolicial','Cadastro salvo com sucesso.');
+    limparPolicialAdmin({forcar:true});await carregarDados();setMsg('admMsgPolicial','Cadastro salvo com sucesso.');
   }catch(e){console.error(e);setMsg('admMsgPolicial','Erro ao salvar: '+erroAmigavel(e),true);}
   finally{btn.disabled=false;}
 }
@@ -89,7 +95,7 @@ async function salvarTipoAdmin(){
       ?await db.from('tipos_afastamento').update(obj).eq('id',editTipoId).select('id').single()
       :await db.from('tipos_afastamento').insert(obj).select('id').single();
     if(res.error)throw res.error;
-    limparTipoAdmin();await carregarDados();setMsg('admMsgTipo','Tipo salvo com sucesso.');
+    limparTipoAdmin({forcar:true});await carregarDados();setMsg('admMsgTipo','Tipo salvo com sucesso.');
   }catch(e){console.error(e);setMsg('admMsgTipo','Erro ao salvar: '+erroAmigavel(e),true);}
   finally{btn.disabled=false;}
 }

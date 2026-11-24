@@ -44,6 +44,7 @@ async function consultarRegistros() {
   clearTimeout(timerBuscaRegistros);
   const token = ++consultaRegistrosToken, contexto = contextoConsulta();
   const f = filtrosRegistrosAtuais(), valida = () => contexto() && token === consultaRegistrosToken;
+  iniciarConsultaTela('afastamentos');
   registros = []; averbacoes = []; erroView = null;
   $('recordsBody').replaceChildren();
   $('recordsPrev').disabled = true; $('recordsNext').disabled = true; $('exportCsv').disabled = true;
@@ -88,12 +89,13 @@ async function consultarRegistros() {
     catch (error) { conferirConsulta(valida); erroAv = error; }
     conferirConsulta(valida);
     registros = dados; averbacoes = av; erroView = erroAv;
-    mostrarRegistros();
+    mostrarRegistros();concluirConsultaTela('afastamentos',!erroAv);
     $('avisoAverbacao').textContent = erroAv
       ? 'Averbação indisponível: ' + erroAmigavel(erroAv)
       : 'Averbação indicativa consultada para os registros desta página. A situação é do ciclo completo, não do evento individual.';
   } catch (error) {
     if (!valida() || error.name === 'AbortError') return;
+    concluirConsultaTela('afastamentos',false);
     totalRegistros = 0; registros = []; averbacoes = []; mostrarRegistros();
     $('recordsInfo').textContent = 'Não foi possível consultar: ' + erroAmigavel(error);
   }

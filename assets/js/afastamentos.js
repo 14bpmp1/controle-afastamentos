@@ -44,11 +44,18 @@ function filtrarPoliciaisCadastro(){
 }
 
 function preencherSeletores(){
-  const p=$('policial'),t=$('tipo'),policialAnterior=p.value;
+  const p=$('policial'),t=$('tipo'),policialAnterior=p.value,tipoAnteriorCadastro=t.value;
+  const rotuloPolicial=p.selectedOptions[0]?.textContent,rotuloTipo=t.selectedOptions[0]?.textContent;
   t.replaceChildren(opcao('','Selecione o tipo'));
   filtrarPoliciaisCadastro();
   if([...p.options].some(o=>o.value===policialAnterior))p.value=policialAnterior;
   tipos.forEach(x=>t.appendChild(opcao(x.id,`${x.sigla} - ${x.descricao}`)));
+  if(editandoId!==null){
+    if(policialAnterior&&![...p.options].some(o=>o.value===policialAnterior))p.appendChild(opcao(policialAnterior,rotuloPolicial||'Cadastro inativo'));
+    if(tipoAnteriorCadastro&&![...t.options].some(o=>o.value===tipoAnteriorCadastro))t.appendChild(opcao(tipoAnteriorCadastro,rotuloTipo||'Tipo inativo'));
+    p.value=policialAnterior;
+  }
+  if([...t.options].some(o=>o.value===tipoAnteriorCadastro))t.value=tipoAnteriorCadastro;
   const filtro=$('filterPolicial'),selecionado=filtro.value;filtro.replaceChildren(opcao('','Todos'));
   policiaisCatalogo.forEach(x=>filtro.appendChild(opcao(x.id,`${x.matricula} · ${x.qra}`)));filtro.value=selecionado;
   const ft=$('filterTipo'),tipoAnterior=ft.value;ft.replaceChildren(opcao('','Todos'));tiposCatalogo.forEach(x=>ft.appendChild(opcao(x.id,`${x.sigla} - ${x.descricao}`)));ft.value=tipoAnterior;
@@ -63,7 +70,8 @@ function preencherFiltroRelatorio(){
 }
 function atualizarTipo(){const t=tipos.find(x=>String(x.id)===$('tipo').value);if(t&&t.dias_fixos!==null){$('dias').value=t.dias_fixos;$('dias').readOnly=true;}else{$('dias').value='';$('dias').readOnly=false;}calcularTermino();}
 function calcularTermino(){const ini=$('inicio').value,n=Number($('dias').value);$('fim').value=ini&&Number.isInteger(n)&&n>=1&&n<=3650?somarDias(ini,n-1):'';}
-function limparFormulario(){
+function limparFormulario({forcar=false}={}){
+  if(!forcar&&!confirmarDescarte('afastamentoForm'))return;
   editandoId=null;
   preencherSeletores();
   $('afastamentoForm').reset();$('dias').readOnly=false;
@@ -74,11 +82,13 @@ function limparFormulario(){
   $('saveButton').textContent='Salvar afastamento';
   $('cancelEditButton').hidden=true;
   $('formMessage').textContent='';
+  registrarFormularioSalvo('afastamentoForm');
 }
 function editarRegistro(id){
   if(!ehAdmin())return;
   const r=registros.find(x=>String(x.id)===String(id));
   if(!r||r.cancelado_em)return;
+  if(!confirmarDescarte('afastamentoForm'))return;
   editandoId=r.id;
   $('policialBusca').value='';filtrarPoliciaisCadastro();
   if(![...$('policial').options].some(o=>o.value===String(r.policial_id)))$('policial').appendChild(opcao(r.policial_id,`${r.policiais?.matricula||r.policial_id} · ${r.policiais?.nome_completo||'Cadastro inativo'}`));
@@ -98,6 +108,7 @@ function editarRegistro(id){
   $('saveButton').textContent='Salvar alterações';
   $('cancelEditButton').hidden=false;
   setMsg('formMessage','Editando registro #'+r.id);
+  registrarFormularioSalvo('afastamentoForm');
   navegarPara('novo-afastamento');
 }
 async function salvarAfastamento(){
@@ -121,7 +132,7 @@ async function salvarAfastamento(){
       if(!resultado.error && resultado.data?.length!==1)throw new Error('O cadastro não foi confirmado.');
     }
     if(resultado.error)throw resultado.error;
-    limparFormulario();
+    limparFormulario({forcar:true});
     setMsg('formMessage','Registro salvo com sucesso!');
     await carregarDados();
     if(inclusaoNova)await v25AvisarAverbacaoAposCadastro(resultado.data[0].id,policial_id);
@@ -137,7 +148,7 @@ async function cancelarRegistro(id){
     const {data,error}=await db.from('afastamentos').update({cancelado_em:new Date().toISOString(),cancelado_por:usuarioAtual.id}).eq('id',id).is('cancelado_em',null).select('id');
     if(error)throw error;
     if(data?.length!==1)throw new Error('Não foi possível confirmar o cancelamento. Atualize a página.');
-    if(String(editandoId)===String(id))limparFormulario();
+    if(String(editandoId)===String(id))limparFormulario({forcar:true});
     await carregarDados();
   }catch(error){console.error('Erro ao cancelar:',error);alert('Não foi possível cancelar: '+erroAmigavel(error));}
 }

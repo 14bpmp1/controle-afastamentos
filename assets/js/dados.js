@@ -68,6 +68,9 @@ async function carregarDados() {
   const token = ++consultaDadosToken;
   invalidarTelas();
   const contexto = contextoConsulta(), valida = () => contexto() && token === consultaDadosToken;
+  iniciarConsultaTela('base');
+  const fonteInicial=fonteConsultaRota(rotaAtual);
+  if(fonteInicial&&fonteInicial!=='base')iniciarConsultaTela(fonteInicial);
   $('refresh').disabled = true;
   setMsg('moduleMessage', 'Atualizando cadastros...'); $('moduleMessage').hidden = false;
   try {
@@ -80,11 +83,14 @@ async function carregarDados() {
     policiaisCatalogo = pessoas.sort((a,b) => a.nome_completo.localeCompare(b.nome_completo, 'pt-BR'));
     tiposCatalogo = categorias.sort((a,b) => a.sigla.localeCompare(b.sigla, 'pt-BR'));
     policiais = policiaisCatalogo.filter(p => p.ativo); tipos = tiposCatalogo.filter(t => t.ativo);
-    preencherSeletores(); preencherFiltroRelatorio(); preencherHistorico();
+    preencherSeletores(); preencherFiltroRelatorio(); preencherHistorico();atualizarAvisoAlteracoes();
+    concluirConsultaTela('base');
     dadosCarregados = true; $('moduleMessage').hidden = true;
     await carregarTelaAtual();
   } catch (error) {
     if (!valida() || error.name === 'AbortError') return;
+    concluirConsultaTela('base',false);
+    const fonte=fonteConsultaRota(rotaAtual);if(fonte&&fonte!=='base')concluirConsultaTela(fonte,false);
     console.error('Erro ao carregar dados:', error);
     setMsg('moduleMessage', 'Erro ao consultar dados: ' + erroAmigavel(error) + ' Use Atualizar para tentar novamente.', true);
     $('moduleMessage').hidden = false;

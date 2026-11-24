@@ -1,16 +1,21 @@
 'use strict';
 
 // V6: gestao de perfis via RPC com verificacao de admin no servidor.
-async function carregarUsuarios(){
+async function carregarUsuarios({descartar=false}={}){
   if(!ehAdmin())return;
+  if(!descartar&&temAlteracoesNaoSalvas('usuarios')){setMsg('usersMessage','Há alterações de usuários não salvas. Salve-as ou use Atualizar usuários para descartá-las.');return;}
+  const estadoAoConsultar=JSON.stringify([...formulariosProtegidos].filter(([chave])=>chave.startsWith('usuarios:')).map(([chave,r])=>[chave,estadoCampos(r.campos)]));
   $('usersMessage').textContent='Carregando usuários...';
-  const sessao=usuarioAtual;
+  const sessao=usuarioAtual,valida=contextoConsulta();iniciarConsultaTela('usuarios');
   const [res,log]=await Promise.all([
     db.rpc('v6_listar_usuarios'),
     db.from('auditoria_perfis').select('usuario_alvo,alterado_por,alterado_em,dados_anteriores,dados_novos').order('alterado_em',{ascending:false}).limit(30)
   ]);
-  if(usuarioAtual!==sessao || !ehAdmin())return;
-  if(res.error){setMsg('usersMessage','Erro ao listar usuários: '+erroAmigavel(res.error),true);return;}
+  if(!valida()||usuarioAtual!==sessao || !ehAdmin())return;
+  if(res.error){concluirConsultaTela('usuarios',false);setMsg('usersMessage','Erro ao listar usuários: '+erroAmigavel(res.error),true);return;}
+  const estadoAtual=JSON.stringify([...formulariosProtegidos].filter(([chave])=>chave.startsWith('usuarios:')).map(([chave,r])=>[chave,estadoCampos(r.campos)]));
+  if(estadoAtual!==estadoAoConsultar){concluirConsultaTela('usuarios',false);setMsg('usersMessage','O formulário foi alterado durante a consulta. Seu preenchimento foi mantido.');return;}
+  limparProtecaoUsuarios();
   const tbody=$('usersBody');tbody.replaceChildren();
   (res.data||[]).forEach(u=>{
     const tr=document.createElement('tr');
@@ -27,23 +32,30 @@ async function carregarUsuarios(){
       botao.disabled=true;
       try{
         const {error}=await db.rpc('v6_atualizar_usuario',{p_usuario_id:u.id,p_nome:novoNome,p_perfil:perfil.value,p_ativo:ativo.checked});
+        if(!valida())return;
         if(error)throw error;
+        registrarFormularioSalvo('usuarios:'+u.id);
         setMsg('usersMessage','Perfil atualizado: '+u.email);
+        botao.disabled=false;
         await carregarUsuarios();
       }catch(e){setMsg('usersMessage','Não foi possível atualizar: '+erroAmigavel(e),true);botao.disabled=false;}
     });
     tdAcao.appendChild(botao);tr.appendChild(tdAcao);tbody.appendChild(tr);
+    protegerCampos('usuarios:'+u.id,'Usuários',[nome,perfil,ativo]);
   });
   if(!(res.data||[]).length){const tr=document.createElement('tr');const td=celula(tr,'Nenhum usuário encontrado.');td.colSpan=5;tbody.appendChild(tr);}
   $('usersMessage').textContent=`${(res.data||[]).length} conta(s) listada(s).`;
   const logBody=$('usersAuditBody');logBody.replaceChildren();
-  if(log.error){$('usersAuditMessage').textContent='Auditoria indisponível: '+erroAmigavel(log.error);return;}
+  if(log.error){concluirConsultaTela('usuarios',false);$('usersAuditMessage').textContent='Auditoria indisponível: '+erroAmigavel(log.error);return;}
+  const emails=new Map((res.data||[]).map(u=>[u.id,u.email]));
   (log.data||[]).forEach(x=>{
     const tr=document.createElement('tr');
-    [new Date(x.alterado_em).toLocaleString('pt-BR'),x.usuario_alvo,x.alterado_por,
-      JSON.stringify(x.dados_anteriores),JSON.stringify(x.dados_novos)].forEach(v=>celula(tr,v));
-    logBody.appendChild(tr);
+    [formatarDataHoraBrasilia(x.alterado_em),emails.get(x.usuario_alvo)||x.usuario_alvo,emails.get(x.alterado_por)||x.alterado_por].forEach(v=>celula(tr,v));
+    tr.className='audit-event';logBody.appendChild(tr);
+    const detalhes=document.createElement('tr');detalhes.className='audit-event-details';const td=celula(detalhes,'');td.colSpan=3;
+    renderizarDetalhesAuditoria(td,{operacao:'UPDATE',dados_anteriores:x.dados_anteriores,dados_novos:x.dados_novos});logBody.appendChild(detalhes);
   });
   $('usersAuditMessage').textContent=`${(log.data||[]).length} alteração(ões) de perfil exibida(s).`;
+  concluirConsultaTela('usuarios');
 }
-$('reloadUsers').addEventListener('click',()=>{void carregarUsuarios();});
+$('reloadUsers').addEventListener('click',()=>{if(confirmarDescarte('usuarios'))void carregarUsuarios({descartar:true});});

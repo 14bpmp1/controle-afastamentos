@@ -51,9 +51,11 @@ async function consultarHistorico() {
   averbacoesHistorico=[];erroViewHistorico=null;registrosHistorico=[];
   if(!f.policial||!periodoHistoricoValido(f)) {
     historicoCarregando=false;totalHistorico=0;mostrarHistorico();
-    if(f.policial)$('historyInfo').textContent='A data inicial não pode ser posterior à final.';
+    if(f.policial){$('historyInfo').textContent='A data inicial não pode ser posterior à final.';concluirConsultaTela('historico',false);}
+    else {consultasConcluidas.delete('historico');mostrarUltimaConsulta();}
     return;
   }
+  iniciarConsultaTela('historico');
   historicoCarregando=true;$('historyBody').replaceChildren();
   $('historyInfo').textContent='Consultando histórico...';
   $('historyPrev').disabled=true;$('historyNext').disabled=true;atualizarAcoesHistorico();
@@ -69,9 +71,10 @@ async function consultarHistorico() {
     try {av=await buscarAverbacoes(linhas.filter(r=>!r.cancelado_em).map(r=>r.id),valida);}
     catch(error){conferirConsulta(valida);erroAv=error;}
     conferirConsulta(valida);
-    registrosHistorico=linhas;averbacoesHistorico=av;erroViewHistorico=erroAv;historicoCarregando=false;mostrarHistorico();
+    registrosHistorico=linhas;averbacoesHistorico=av;erroViewHistorico=erroAv;historicoCarregando=false;mostrarHistorico();concluirConsultaTela('historico',!erroAv);
   } catch(error) {
     if(!valida()||error.name==='AbortError')return;
+    concluirConsultaTela('historico',false);
     historicoCarregando=false;totalHistorico=0;registrosHistorico=[];limparHistoricoCompleto();mostrarHistorico();
     $('historyInfo').textContent='Não foi possível consultar o histórico: '+erroAmigavel(error);
   }

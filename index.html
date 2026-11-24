@@ -15,7 +15,8 @@
 <div class="msg" id="loginMessage" role="status">Inicializando conexão com o Supabase...</div>
 </section>
 <section id="systemPage" hidden>
-<div class="toolbar"><div><h2 id="pageTitle" tabindex="-1">Painel de Afastamentos</h2><div class="muted" id="userInfo"></div></div><button class="secondary" id="refresh" type="button">Atualizar</button></div>
+<div class="toolbar"><div><h2 id="pageTitle" tabindex="-1">Painel de Afastamentos</h2><div class="muted" id="userInfo"></div><p class="muted" id="lastUpdate" role="status" hidden></p></div><button class="secondary" id="refresh" type="button">Atualizar</button></div>
+<p id="unsavedNotice" class="unsaved-notice" role="status" hidden></p>
 <p id="moduleMessage" class="msg" role="status" hidden></p>
 <nav class="v11-nav" id="v11Nav" aria-label="Navegação entre módulos">
   <div class="v20-menu-head"><div class="v11-nav-title">Módulos</div><button type="button" class="v20-menu-toggle" id="v20ToggleMenu" aria-label="Recolher menu lateral" aria-expanded="true" title="Recolher ou expandir menu">☰</button></div>
@@ -87,7 +88,8 @@
     <div><label for="historyEnd">Até (início do afastamento)</label><input type="date" id="historyEnd"></div>
     <div><label for="historyCancelados">Incluir cancelados</label><select id="historyCancelados"><option value="nao">Não</option><option value="sim">Sim</option></select></div>
   </div>
-  <h3>Totais do filtro</h3>
+  <div class="actions period-shortcuts" aria-label="Atalhos de período"><button type="button" class="secondary" data-destino="historico" data-periodo="mes-atual">Este mês</button><button type="button" class="secondary" data-destino="historico" data-periodo="mes-anterior">Mês anterior</button><button type="button" class="secondary" data-destino="historico" data-periodo="ano-atual">Este ano</button></div>
+<h3>Totais do filtro</h3>
   <p class="help">A quantidade de afastamentos é consultada automaticamente. Use Calcular totais para obter dias, tipos e cancelamentos de todas as páginas.</p>
   <div class="history-summary">
     <div class="stat"><span>Afastamentos</span><strong id="historyCount">—</strong></div>
@@ -112,6 +114,7 @@
 <div><label for="reportPolicial">Policial</label><select id="reportPolicial"><option value="">Todos</option></select></div>
 <div><label for="reportTipo">Tipo</label><select id="reportTipo"><option value="">Todos</option></select></div>
 </div>
+<div class="actions period-shortcuts" aria-label="Atalhos de período"><button type="button" class="secondary" data-destino="relatorios" data-periodo="mes-atual">Este mês</button><button type="button" class="secondary" data-destino="relatorios" data-periodo="mes-anterior">Mês anterior</button><button type="button" class="secondary" data-destino="relatorios" data-periodo="ano-atual">Este ano</button></div>
 <div class="report-stats">
 <div class="report-stat"><span>Afastamentos no relatório</span><strong id="reportCount">0</strong></div>
 <div class="report-stat"><span>Policiais distintos na página</span><strong id="reportPeople">0</strong></div>
@@ -169,7 +172,7 @@
   <div class="table-wrap"><table class="user-table"><thead><tr><th>E-mail</th><th>Nome</th><th>Perfil</th><th>Ativo</th><th>Ações</th></tr></thead><tbody id="usersBody"></tbody></table></div>
   <p class="msg" id="usersMessage" role="status"></p>
   <h3>Últimas alterações de acesso</h3>
-  <div class="table-wrap"><table><thead><tr><th>Data/hora</th><th>Conta (ID)</th><th>Alterado por (ID)</th><th>Antes</th><th>Depois</th></tr></thead><tbody id="usersAuditBody"></tbody></table></div>
+  <div class="table-wrap"><table><thead><tr><th>Data/hora (Brasília)</th><th>Usuário alterado</th><th>Alterado por</th></tr></thead><tbody id="usersAuditBody"></tbody></table></div>
   <p class="muted" id="usersAuditMessage"></p>
 </section>
 <section class="panel admin-box" id="auditPanel" hidden data-screen>
@@ -182,11 +185,11 @@
 <div><label for="auditSearch">Buscar registro, usuário (ID ou e-mail)</label><input id="auditSearch" type="search" placeholder="ID do registro ou e-mail"></div>
 </div>
 <div class="audit-actions"><button type="button" class="secondary" id="auditReload">Consultar auditoria</button><button type="button" class="secondary" id="auditClear">Limpar filtros</button><button type="button" class="primary" id="auditCsv">Exportar CSV filtrado</button></div>
-<div class="table-wrap"><table><thead><tr><th>Data/hora</th><th>Operação</th><th>Registro</th><th>Usuário (e-mail)</th></tr></thead><tbody id="auditBody"></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>Data/hora (Brasília)</th><th>Operação</th><th>Registro</th><th>Usuário (e-mail)</th></tr></thead><tbody id="auditBody"></tbody></table></div>
 <div class="audit-actions"><button type="button" class="secondary" id="auditPrev">← Página anterior</button><span id="auditPageLabel" role="status" style="align-self:center">Página 1</span><button type="button" class="secondary" id="auditNext">Próxima página →</button></div>
 <p class="muted" id="auditInfo"></p>
 <p class="audit-note">UPDATE mostra somente alterações comuns. CANCELAMENTO mostra apenas as atualizações que registraram cancelado_em. Não há filtro de exclusão física.</p>
-<p class="audit-note">A auditoria é paginada diretamente no Supabase (100 eventos por página), sem o antigo limite de 1.000 eventos. Datas são filtradas no banco; operação e pesquisa por ID filtram a página atual. O CSV exporta somente os eventos visíveis da página, não todo o histórico nem um backup do banco.</p>
+<p class="audit-note">A auditoria é paginada diretamente no Supabase (100 eventos por página), sem o antigo limite de 1.000 eventos. Datas são filtradas no banco; operação e pesquisa por ID filtram a página atual. Os detalhes mostram os campos alterados. O CSV inclui uma linha por campo dos eventos visíveis da página; não representa todo o histórico nem um backup do banco.</p>
 </section>
 </section>
 </main>
@@ -203,9 +206,11 @@
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script defer src="./assets/js/config.js"></script>
 <script defer src="./assets/js/core.js"></script>
+<script defer src="./assets/js/experiencia.js"></script>
 <script defer src="./assets/js/auth.js"></script>
 <script defer src="./assets/js/dados.js"></script>
 <script defer src="./assets/js/afastamentos.js"></script>
+<script defer src="./assets/js/auditoria-detalhes.js"></script>
 <script defer src="./assets/js/auditoria.js"></script>
 <script defer src="./assets/js/painel.js"></script>
 <script defer src="./assets/js/registros.js"></script>

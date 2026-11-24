@@ -25,11 +25,12 @@ async function consultarRelatorio(){
   if(!usuarioAtual||!dadosCarregados)return;
   const contexto=contextoConsulta();
   const token=++relatorioToken;
+  iniciarConsultaTela('relatorios');
   const chave=JSON.stringify(filtrosRelatorioAtuais());
   if(chave!==chaveTotaisRelatorio){limparTotaisRelatorio();limparImpressaoCompleta();chaveTotaisRelatorio=chave;}
   if(!validarPeriodoRelatorio()){
     registrosRelatorio=[];totalRelatorio=0;relatorioCarregando=false;mostrarRelatorio();
-    $('reportInfo').textContent='A data inicial não pode ser posterior à data final.';return;
+    $('reportInfo').textContent='A data inicial não pode ser posterior à data final.';concluirConsultaTela('relatorios',false);return;
   }
   relatorioCarregando=true;
   $('reportInfo').textContent='Consultando relatório no Supabase...';
@@ -45,9 +46,10 @@ async function consultarRelatorio(){
     totalRelatorio=count??0;
     const ultima=Math.max(1,Math.ceil(totalRelatorio/RELATORIO_POR_PAGINA));
     if(paginaRelatorio>ultima){paginaRelatorio=ultima;void consultarRelatorio();return;}
-    registrosRelatorio=data||[];relatorioCarregando=false;mostrarRelatorio();
+    registrosRelatorio=data||[];relatorioCarregando=false;mostrarRelatorio();concluirConsultaTela('relatorios');
   }catch(error){
     if(!contexto()||token!==relatorioToken)return;
+    concluirConsultaTela('relatorios',false);
     console.error('Erro ao consultar relatório:',error);
     registrosRelatorio=[];totalRelatorio=0;relatorioCarregando=false;mostrarRelatorio();
     $('reportInfo').textContent='Falha na consulta do relatório: '+erroAmigavel(error);
