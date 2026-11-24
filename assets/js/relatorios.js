@@ -9,7 +9,11 @@ function validarPeriodoRelatorio(){
   return true;
 }
 async function consultarRelatorio(){
+  if(!usuarioAtual||!dadosCarregados)return;
+  const contexto=contextoConsulta();
   const token=++relatorioToken;
+  const chave=JSON.stringify(filtrosRelatorioAtuais());
+  if(chave!==chaveTotaisRelatorio){limparTotaisRelatorio();chaveTotaisRelatorio=chave;}
   if(!validarPeriodoRelatorio()){
     registrosRelatorio=[];totalRelatorio=0;relatorioCarregando=false;mostrarRelatorio();
     $('reportInfo').textContent='A data inicial não pode ser posterior à data final.';return;
@@ -17,7 +21,7 @@ async function consultarRelatorio(){
   relatorioCarregando=true;
   $('reportInfo').textContent='Consultando relatório no Supabase...';
   $('reportPrev').disabled=true;$('reportNext').disabled=true;
-  $('reportCsv').disabled=true;$('reportPrint').disabled=true;
+  $('reportCsv').disabled=true;$('reportPrint').disabled=true;$('reportTotals').disabled=true;
   let q=db.from('afastamentos')
     .select('id,policial_id,tipo_id,data_inicio,data_fim,dias,cancelado_em,policiais(matricula,qra,nome_completo),tipos_afastamento(sigla)',{count:'exact'})
     .is('cancelado_em',null)
@@ -30,18 +34,18 @@ async function consultarRelatorio(){
   if($('reportTipo').value)q=q.eq('tipo_id',$('reportTipo').value);
   try{
     const {data,error,count}=await q;
-    if(token!==relatorioToken)return;
+    if(!contexto()||token!==relatorioToken)return;
     if(error)throw error;
     totalRelatorio=count??0;
     const ultima=Math.max(1,Math.ceil(totalRelatorio/RELATORIO_POR_PAGINA));
     if(paginaRelatorio>ultima){paginaRelatorio=ultima;void consultarRelatorio();return;}
     registrosRelatorio=data||[];relatorioCarregando=false;mostrarRelatorio();
   }catch(error){
-    if(token!==relatorioToken)return;
+    if(!contexto()||token!==relatorioToken)return;
     console.error('Erro ao consultar relatório:',error);
     registrosRelatorio=[];totalRelatorio=0;relatorioCarregando=false;mostrarRelatorio();
     $('reportInfo').textContent='Falha na consulta do relatório: '+erroAmigavel(error);
-    $('reportCsv').disabled=true;$('reportPrint').disabled=true;$('reportCsvFull').disabled=true;
+    $('reportCsv').disabled=true;$('reportPrint').disabled=true;$('reportCsvFull').disabled=true;$('reportTotals').disabled=true;
   }
 }
 function mostrarRelatorio(){
@@ -61,7 +65,8 @@ function mostrarRelatorio(){
   $('reportCsv').disabled=relatorioCarregando||!dados.length;
   $('reportCsvFull').disabled=relatorioCarregando||exportacaoRelatorioEmAndamento||!totalRelatorio;
   $('reportPrint').disabled=relatorioCarregando||!dados.length;
-  $('reportInfo').textContent=`${totalRelatorio} afastamento(s) no banco com estes filtros. Exibindo ${dados.length} registro(s) na página ${paginaRelatorio}. Policiais distintos e dias somados apenas nesta página. CSV da página e impressão incluem somente esta página; use Exportar relatório completo CSV para obter todos os registros filtrados.`;
+  $('reportTotals').disabled=relatorioCarregando||totaisRelatorioRodando||!totalRelatorio;
+  $('reportInfo').textContent=`${totalRelatorio} afastamento(s) no banco com estes filtros. Exibindo ${dados.length} registro(s) na página ${paginaRelatorio}. Policiais distintos e dias somados apenas nesta página. CSV da página e impressão incluem somente esta página; use Exportar relatório completo CSV para obter todos os registros filtrados e Calcular totais do período para conferir o conjunto completo.`;
   $('reportPrintInfo').textContent=`14º BPM — Relatório de Afastamentos | Período: ${formatarData($('reportStart').value)||'sem início definido'} a ${formatarData($('reportEnd').value)||'sem fim definido'} | Página ${paginaRelatorio} | Gerado em ${formatarData(hojeISO())}`;
 }
 function exportarRelatorioCsv(){
@@ -100,7 +105,7 @@ function linhaCsvRelatorio(r){
 }
 async function exportarRelatorioCompletoCsv(){
   if(exportacaoRelatorioEmAndamento||relatorioCarregando||!validarPeriodoRelatorio()||!totalRelatorio)return;
-  const filtros=filtrosRelatorioAtuais();
+  const filtros=filtrosRelatorioAtuais(), contexto=contextoConsulta();
   exportacaoRelatorioEmAndamento=true;exportacaoRelatorioCancelada=false;
   const botao=$('reportCsvFull'),cancelar=$('reportCancelExport');
   botao.disabled=true;cancelar.hidden=false;
@@ -111,8 +116,8 @@ async function exportarRelatorioCompletoCsv(){
     // Cursor composto por data_inicio + id evita o limite de offset do PostgREST em históricos extensos.
     // Usa a mesma ordenação do relatório na tela: data_inicio DESC, id DESC.
     while(true){
-      if(exportacaoRelatorioCancelada)throw new Error('Exportação cancelada. Nenhum arquivo parcial foi gerado.');
-      if(!filtrosRelatorioIguais(filtros,filtrosRelatorioAtuais()))throw new Error('Os filtros foram alterados. Reinicie a exportação.');
+      if(!contexto()||exportacaoRelatorioCancelada)throw new Error('Exportação cancelada. Nenhum arquivo parcial foi gerado.');
+      if(!contexto()||!filtrosRelatorioIguais(filtros,filtrosRelatorioAtuais()))throw new Error('Os filtros foram alterados. Reinicie a exportação.');
       status.textContent=`Preparando CSV completo... ${carregados} registro(s) recebidos.`;
       let q=db.from('afastamentos')
         .select('id,policial_id,tipo_id,data_inicio,data_fim,dias,cancelado_em,policiais(matricula,qra,nome_completo),tipos_afastamento(sigla)')
@@ -129,15 +134,15 @@ async function exportarRelatorioCompletoCsv(){
       }
       const {data,error}=await q;
       if(error)throw error;
-      if(exportacaoRelatorioCancelada)throw new Error('Exportação cancelada. Nenhum arquivo parcial foi gerado.');
+      if(!contexto()||exportacaoRelatorioCancelada)throw new Error('Exportação cancelada. Nenhum arquivo parcial foi gerado.');
       const lote=data||[];
       if(!lote.length)break;
       for(const r of lote)linhas.push(linhaCsvRelatorio(r));
       carregados+=lote.length;
       const ultimo=lote[lote.length-1];ultimaData=ultimo.data_inicio;ultimoId=ultimo.id;
-      if(lote.length<LOTE_EXPORTACAO_RELATORIO)break;
+
     }
-    if(!filtrosRelatorioIguais(filtros,filtrosRelatorioAtuais()))throw new Error('Os filtros foram alterados. Reinicie a exportação.');
+    if(!contexto()||!filtrosRelatorioIguais(filtros,filtrosRelatorioAtuais()))throw new Error('Os filtros foram alterados. Reinicie a exportação.');
     if(!carregados)throw new Error('Nenhum registro encontrado para exportar.');
     const csv='\uFEFF'+linhas.join('\r\n');
     const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
@@ -147,7 +152,7 @@ async function exportarRelatorioCompletoCsv(){
     status.textContent=`Exportação concluída: ${carregados} afastamento(s) no arquivo CSV. A base pode ter mudado durante a consulta.`;
   }catch(error){
     console.error('Falha na exportação completa:',error);
-    status.textContent='Não foi possível concluir: '+erroAmigavel(error)+' Nenhum CSV parcial foi baixado.';
+    if(contexto())status.textContent='Não foi possível concluir: '+erroAmigavel(error)+' Nenhum CSV parcial foi baixado.';
   }finally{
     exportacaoRelatorioEmAndamento=false;cancelar.hidden=true;
     botao.disabled=relatorioCarregando||!totalRelatorio;
@@ -155,3 +160,48 @@ async function exportarRelatorioCompletoCsv(){
 }
 $('reportCsvFull').addEventListener('click',()=>{void exportarRelatorioCompletoCsv();});
 $('reportCancelExport').addEventListener('click',cancelarExportacaoRelatorio);
+
+let totaisRelatorioToken=0, totaisRelatorioRodando=false, chaveTotaisRelatorio=null;
+function limparTotaisRelatorio() {
+  totaisRelatorioToken++; totaisRelatorioRodando=false; chaveTotaisRelatorio=null;
+  $('reportFullTotals').hidden=true; $('reportTotalsCancel').hidden=true;
+  $('reportTotalsStatus').textContent='';
+  $('reportTotalPeople').textContent='—'; $('reportTotalDays').textContent='—'; $('reportTotalRows').textContent='—';
+}
+async function calcularTotaisRelatorio() {
+  if(!usuarioAtual||relatorioCarregando||totaisRelatorioRodando||!totalRelatorio||!validarPeriodoRelatorio())return;
+  const filtros=filtrosRelatorioAtuais(), contexto=contextoConsulta(), token=++totaisRelatorioToken;
+  const valida=()=>contexto()&&token===totaisRelatorioToken&&filtrosRelatorioIguais(filtros,filtrosRelatorioAtuais());
+  totaisRelatorioRodando=true; $('reportTotals').disabled=true; $('reportTotalsCancel').hidden=false; $('reportFullTotals').hidden=true;
+  const pessoas=new Set(); let dias=0, total=0;
+  try {
+    await percorrerPorId(()=>{
+      let q=db.from('afastamentos').select('id,policial_id,dias').is('cancelado_em',null);
+      if(filtros.ini)q=q.gte('data_inicio',filtros.ini);
+      if(filtros.fim)q=q.lte('data_inicio',filtros.fim);
+      if(filtros.policial)q=q.eq('policial_id',filtros.policial);
+      if(filtros.tipo)q=q.eq('tipo_id',filtros.tipo);
+      return q;
+    }, lote=>{
+      for(const r of lote){pessoas.add(String(r.policial_id));dias+=Number(r.dias||0);total++;}
+      $('reportTotalsStatus').textContent=`Calculando totais: ${total} registro(s) conferidos...`;
+    },valida);
+    conferirConsulta(valida);
+    $('reportTotalRows').textContent=total; $('reportTotalPeople').textContent=pessoas.size; $('reportTotalDays').textContent=dias;
+    $('reportFullTotals').hidden=false;
+    $('reportTotalsStatus').textContent='Totais de todos os registros filtrados, excluindo cancelados. Dias são a soma das durações, não dias únicos de calendário. A base pode mudar durante a consulta.';
+  } catch(error) {
+    if(contexto()&&token===totaisRelatorioToken)$('reportTotalsStatus').textContent='Não foi possível concluir os totais. '+(error.name==='AbortError'?'Consulta cancelada.':erroAmigavel(error));
+  } finally {
+    if(token===totaisRelatorioToken){
+      totaisRelatorioRodando=false; $('reportTotalsCancel').hidden=true;
+      $('reportTotals').disabled=relatorioCarregando||!totalRelatorio;
+    }
+  }
+}
+$('reportTotals').addEventListener('click',()=>{void calcularTotaisRelatorio();});
+$('reportTotalsCancel').addEventListener('click',()=>{
+  limparTotaisRelatorio();
+  $('reportTotalsStatus').textContent='Cálculo cancelado. Nenhum total parcial foi apresentado.';
+  $('reportTotals').disabled=relatorioCarregando||!totalRelatorio;
+});

@@ -2,11 +2,11 @@
 
 // Fragmentos funcionam no subdiretório de um GitHub Pages e preservam links antigos.
 const TELAS = {
-  painel: { titulo: 'Painel de Afastamentos', paineis: ['v11Dashboard', 'alertsPanel'] },
-  alertas: { titulo: 'Alertas de retorno', paineis: ['alertsPanel'] },
-  agenda: { titulo: 'Agenda', paineis: ['agendaPanel'] },
+  painel: { titulo: 'Painel de Afastamentos', paineis: ['v11Dashboard', 'alertsPanel'], carregar: () => carregarPainel() },
+  alertas: { titulo: 'Alertas de retorno', paineis: ['alertsPanel'], carregar: () => carregarAlertas() },
+  agenda: { titulo: 'Agenda', paineis: ['agendaPanel'], carregar: () => carregarAgenda() },
   'novo-afastamento': { titulo: 'Novo afastamento', paineis: ['v11Cadastro'] },
-  afastamentos: { titulo: 'Registros de afastamentos', paineis: ['v11Registros'] },
+  afastamentos: { titulo: 'Registros de afastamentos', paineis: ['v11Registros'], carregar: () => consultarRegistros() },
   historico: { titulo: 'Histórico individual', paineis: ['historyPanel'], carregar: () => consultarHistorico() },
   relatorios: { titulo: 'Relatórios', paineis: ['reportPanel'], carregar: () => consultarRelatorio() },
   cadastros: { titulo: 'Administração de cadastros', paineis: ['cadastrosPanel'], admin: true, carregar: () => carregarCadastros() },
@@ -25,6 +25,7 @@ const consultasTela = new Map();
 
 function invalidarTelas() {
   dadosCarregados = false;
+  cancelarConsultasAtuais();
   geracaoTelas++;
   consultasTela.clear();
   $('moduleMessage').hidden = true;
@@ -39,6 +40,7 @@ async function carregarTelaAtual() {
   const consulta = Promise.resolve().then(() => {
     if (geracao === geracaoTelas && usuarioAtual && (!tela.admin || ehAdmin())) return tela.carregar();
   }).catch(error => {
+    if(error.name==='AbortError')return;
     console.error('Erro ao carregar a tela:', error);
     if (geracao === geracaoTelas && rota === rotaAtual && usuarioAtual) {
       setMsg('moduleMessage', 'Não foi possível carregar esta tela. Use Atualizar para tentar novamente. ' + erroAmigavel(error), true);
@@ -56,7 +58,11 @@ function renderizarRota({ carregar = true, foco = false } = {}) {
   const fragmento = window.location.hash.slice(1);
   const solicitada = fragmento.startsWith('/') ? fragmento.slice(1) : ROTAS_ANTIGAS[fragmento];
   const permitida = Object.hasOwn(TELAS, solicitada) && (!TELAS[solicitada].admin || ehAdmin());
-  rotaAtual = permitida ? solicitada : 'painel';
+  const destino = permitida ? solicitada : 'painel';
+  if(rotaAtual==='afastamentos' && destino!==rotaAtual){
+    consultaRegistrosToken++; clearTimeout(timerBuscaRegistros); consultasTela.delete(rotaAtual);
+  }
+  rotaAtual = destino;
   const tela = TELAS[rotaAtual], hash = '#/' + rotaAtual;
   if (window.location.hash !== hash) history.replaceState(null, '', hash);
   document.querySelectorAll('[data-screen]').forEach(painel => {

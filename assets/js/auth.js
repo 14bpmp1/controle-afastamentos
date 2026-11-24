@@ -65,7 +65,10 @@ $('v19TimeoutOverlay').addEventListener('keydown',e=>{
 });
 function exibirLogin(){v19StopIdle();usuarioAtual=null;perfilAtual=null;policiais=[];tipos=[];registros=[];averbacoes=[];erroView=null;editandoId=null;auditoria=[];v20EmailsUsuarios=new Map();relatorioToken++;registrosRelatorio=[];totalRelatorio=0;paginaRelatorio=1;historicoToken++;registrosHistorico=[];totalHistorico=0;paginaHistorico=1;paginaAuditoria=1;totalAuditoria=0;consultaAuditoriaToken++;$('loginPage').hidden=false;$('systemPage').hidden=true;$('logout').hidden=true;
   invalidarTelas();
-  todosPoliciais=[];todosTipos=[];editPolicialId=null;editTipoId=null;
+  todosPoliciais=[];todosTipos=[];policiaisCatalogo=[];tiposCatalogo=[];editPolicialId=null;editTipoId=null;
+  dadosAlertas=[];dadosAgenda=[];totalRegistros=0;averbacoesHistorico=[];erroViewHistorico=null;
+  importLimpar();
+  ['recordsExportStatus','reportExportStatus','panelInfo'].forEach(id=>$(id).textContent='');
   document.querySelectorAll('[data-screen]').forEach(painel=>painel.hidden=true);
   document.querySelectorAll('.v11-admin-link').forEach(link=>link.hidden=true);
   $('v11Top').hidden=true;

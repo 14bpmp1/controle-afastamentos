@@ -3,19 +3,19 @@
 // V16: histórico individual consultado diretamente no banco e paginado.
 const HISTORICO_POR_PAGINA=100;
 let paginaHistorico=1,totalHistorico=0,registrosHistorico=[],historicoToken=0;
+let averbacoesHistorico=[],erroViewHistorico=null;
 function preencherHistorico(){
   const seletor=$('historyPolicial'),anterior=seletor.value,porId=new Map();
-  for(const p of policiais)porId.set(String(p.id),`${p.matricula} · ${p.qra} · ${p.nome_completo}`);
-  for(const r of registros){
-    const id=String(r.policial_id);
-    if(!porId.has(id))porId.set(id,`${r.policiais?.matricula||'ID '+id} · ${r.policiais?.qra||''} · ${r.policiais?.nome_completo||'Cadastro inativo'}`);
-  }
+  for(const p of policiaisCatalogo)porId.set(String(p.id),`${p.matricula} · ${p.qra} · ${p.nome_completo}${p.ativo?'':' (inativo)'}`);
   seletor.replaceChildren(opcao('','Selecione um policial'));
   [...porId.entries()].sort((a,b)=>a[1].localeCompare(b[1],'pt-BR')).forEach(([id,nome])=>seletor.appendChild(opcao(id,nome)));
   if(porId.has(anterior))seletor.value=anterior;
 }
 async function consultarHistorico(){
+  const contexto=contextoConsulta();
   const token=++historicoToken,id=$('historyPolicial').value,ini=$('historyStart').value,fim=$('historyEnd').value;
+  const valida=()=>contexto()&&token===historicoToken;
+  averbacoesHistorico=[];erroViewHistorico=null;
   if(!id){registrosHistorico=[];totalHistorico=0;mostrarHistorico();return;}
   if(ini&&fim&&ini>fim){registrosHistorico=[];totalHistorico=0;mostrarHistorico();$('historyInfo').textContent='A data inicial não pode ser posterior à final.';return;}
   $('historyInfo').textContent='Consultando histórico no Supabase...';
@@ -28,12 +28,16 @@ async function consultarHistorico(){
   if(fim)q=q.lte('data_inicio',fim);
   if($('historyCancelados').value!=='sim')q=q.is('cancelado_em',null);
   const {data,error,count}=await q;
-  if(token!==historicoToken)return;
+  if(!valida())return;
   if(error){registrosHistorico=[];totalHistorico=0;mostrarHistorico();$('historyInfo').textContent='Erro na consulta: '+erroAmigavel(error);return;}
   totalHistorico=count??0;
   const ultima=Math.max(1,Math.ceil(totalHistorico/HISTORICO_POR_PAGINA));
   if(paginaHistorico>ultima){paginaHistorico=ultima;await consultarHistorico();return;}
-  registrosHistorico=data||[];mostrarHistorico();
+  const linhas=data||[];
+  try{averbacoesHistorico=await buscarAverbacoes(linhas.filter(r=>!r.cancelado_em).map(r=>r.id),valida);}
+  catch(error){if(!valida())return;erroViewHistorico=error;}
+  if(!valida())return;
+  registrosHistorico=linhas;mostrarHistorico();
 }
 function mostrarHistorico(){
   const tbody=$('historyBody'),info=$('historyInfo');tbody.replaceChildren();
@@ -43,10 +47,10 @@ function mostrarHistorico(){
   $('historyDays').textContent=id?dados.filter(r=>!r.cancelado_em).reduce((s,r)=>s+Number(r.dias||0),0):'—';
   $('historyTypes').textContent=id?new Set(dados.map(r=>r.tipo_id)).size:'—';
   $('historyCanceled').textContent=id?dados.filter(r=>r.cancelado_em).length:'—';
-  const mapa=new Map(averbacoes.map(a=>[String(a.afastamento_id),a]));
+  const mapa=new Map(averbacoesHistorico.map(a=>[String(a.afastamento_id),a]));
   for(const r of dados){
     const a=!r.cancelado_em?mapa.get(String(r.id)):null,tr=document.createElement('tr');
-    [r.tipos_afastamento?.sigla||'',formatarData(r.data_inicio),formatarData(r.data_fim),r.dias,situacao(r),r.cancelado_em?'Não aplicável':erroView?'Indisponível':a?.situacao_averbacao||'Não disponível',a?formatarData(a.inicio_ciclo):'—',a?formatarData(a.fim_ciclo):'—'].forEach(v=>{const td=document.createElement('td');td.textContent=String(v??'');tr.appendChild(td);});
+    [r.tipos_afastamento?.sigla||'',formatarData(r.data_inicio),formatarData(r.data_fim),r.dias,situacao(r),r.cancelado_em?'Não aplicável':erroViewHistorico?'Indisponível':a?.situacao_averbacao||'Não disponível',a?formatarData(a.inicio_ciclo):'—',a?formatarData(a.fim_ciclo):'—'].forEach(v=>{const td=document.createElement('td');td.textContent=String(v??'');tr.appendChild(td);});
     tbody.appendChild(tr);
   }
   if(!dados.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=8;td.textContent=id?'Nenhum registro encontrado para os filtros.':'Selecione um policial para consultar o histórico.';tr.appendChild(td);tbody.appendChild(tr);}
@@ -55,14 +59,14 @@ function mostrarHistorico(){
   $('historyPrev').disabled=!id||paginaHistorico<=1;
   $('historyNext').disabled=!id||paginaHistorico>=paginas;
   $('historyCsv').disabled=!dados.length;
-  info.textContent=`${totalHistorico} afastamento(s) encontrado(s) no banco; ${dados.length} nesta página. Os indicadores de dias, tipos e cancelamentos mostram somente a página atual. CSV exporta somente a página atual. Averbação indicativa baseada na view carregada (até 20.000 linhas), podendo faltar em históricos extensos.`;
+  info.textContent=`${totalHistorico} afastamento(s) encontrado(s) no banco; ${dados.length} nesta página. Os indicadores de dias, tipos e cancelamentos mostram somente a página atual. CSV exporta somente a página atual. Averbação indicativa consultada para os registros desta página.`;
 }
 function exportarHistoricoCsv(){
   if(!$('historyPolicial').value||!registrosHistorico.length)return;
-  const mapa=new Map(averbacoes.map(a=>[String(a.afastamento_id),a]));
+  const mapa=new Map(averbacoesHistorico.map(a=>[String(a.afastamento_id),a]));
   const linhas=[['Matrícula','QRA','Policial','Tipo','Início','Término','Dias','Situação','Averbação indicativa','Início ciclo','Fim ciclo']];
   for(const r of registrosHistorico){const a=!r.cancelado_em?mapa.get(String(r.id)):null;
-    linhas.push([r.policiais?.matricula||'',r.policiais?.qra||'',r.policiais?.nome_completo||'',r.tipos_afastamento?.sigla||'',formatarData(r.data_inicio),formatarData(r.data_fim),r.dias,situacao(r),r.cancelado_em?'Não aplicável':erroView?'Indisponível':a?.situacao_averbacao||'Não disponível',a?formatarData(a.inicio_ciclo):'',a?formatarData(a.fim_ciclo):'']);
+    linhas.push([r.policiais?.matricula||'',r.policiais?.qra||'',r.policiais?.nome_completo||'',r.tipos_afastamento?.sigla||'',formatarData(r.data_inicio),formatarData(r.data_fim),r.dias,situacao(r),r.cancelado_em?'Não aplicável':erroViewHistorico?'Indisponível':a?.situacao_averbacao||'Não disponível',a?formatarData(a.inicio_ciclo):'',a?formatarData(a.fim_ciclo):'']);
   }
   const cel=v=>{let t=String(v??'');if(/^[\s]*[=+@-]/.test(t))t="'"+t;return '"'+t.replace(/"/g,'""')+'"';};
   const csv='\uFEFF'+linhas.map(l=>l.map(cel).join(';')).join('\r\n');

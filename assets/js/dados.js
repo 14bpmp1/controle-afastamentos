@@ -1,58 +1,102 @@
 'use strict';
 
-async function buscarEmLotes(criarConsulta, maximo=MAX_REGISTROS){
-  const resultado=[];
-  for(let inicio=0;inicio<maximo;inicio+=TAMANHO_LOTE){
-    const {data,error}=await criarConsulta().range(inicio,inicio+TAMANHO_LOTE-1);
-    if(error)throw error;
-    const lote=data||[];
-    resultado.push(...lote);
-    if(lote.length<TAMANHO_LOTE)return {dados:resultado,truncado:false};
-  }
-  return {dados:resultado,truncado:true};
+const COLUNAS_AFASTAMENTO = 'id,policial_id,tipo_id,data_inicio,data_fim,dias,observacoes,cancelado_em,policiais(matricula,qra,nome_completo),tipos_afastamento(sigla)';
+const COLUNAS_AVERBACAO = 'afastamento_id,policial_id,numero_ciclo,inicio_ciclo,fim_ciclo,total_dias,situacao_averbacao';
+const LOTE_CONSULTA = 500;
+let policiaisCatalogo = [], tiposCatalogo = [];
+
+function contextoConsulta() {
+  const sessao = usuarioAtual, geracao = geracaoTelas;
+  return () => Boolean(sessao && usuarioAtual === sessao && geracao === geracaoTelas);
 }
-let consultaDadosToken=0;
-async function carregarDados(){
-  if(!usuarioAtual)return;
-  const v19UserId=usuarioAtual.id;
-  const token=++consultaDadosToken;
-  invalidarTelas();
-  $('refresh').disabled=true;
-  setMsg('moduleMessage','Atualizando dados...');
-  $('moduleMessage').hidden=false;
-  $('recordsInfo').textContent='Carregando registros...';
-  try{
-    const [p,t,a,v]=await Promise.allSettled([
-      db.from('policiais').select('id,matricula,posto_graduacao,qra,nome_completo').eq('ativo',true).order('nome_completo'),
-      db.from('tipos_afastamento').select('id,sigla,descricao,dias_fixos').eq('ativo',true).order('sigla'),
-      buscarEmLotes(()=>db.from('afastamentos').select('id,policial_id,tipo_id,data_inicio,data_fim,dias,observacoes,cancelado_em,policiais(matricula,qra,nome_completo),tipos_afastamento(sigla)').order('data_inicio',{ascending:false}).order('id',{ascending:false})),
-      buscarEmLotes(()=>db.from('vw_averbacoes').select('afastamento_id,policial_id,numero_ciclo,inicio_ciclo,fim_ciclo,total_dias,situacao_averbacao').order('afastamento_id',{ascending:true}))
-    ]);
-    if(!usuarioAtual || usuarioAtual.id!==v19UserId || token!==consultaDadosToken)return;
-    for(const r of [p,t,a])if(r.status==='rejected')throw r.reason;
-    if(p.value.error||t.value.error)throw p.value.error||t.value.error;
-    policiais=p.value.data||[];tipos=t.value.data||[];registros=a.value.dados;
-    registrosTruncados=a.value.truncado;
-    erroView=v.status==='rejected'?v.reason:null;
-    averbacoes=v.status==='fulfilled'?v.value.dados:[];
-    averbacoesTruncadas=v.status==='fulfilled'&&v.value.truncado;
-    paginaRegistros=1;
-    if(erroView)console.error('Falha ao consultar vw_averbacoes:',erroView);
-    $('avisoAverbacao').textContent=erroView
-      ? 'Não foi possível consultar a view de averbações: '+(erroView.message||String(erroView))
-      : 'Averbação indicativa: DM/LTSP por ciclo de 30 dias; a situação é do ciclo completo, não do evento individual. Os demais tipos são não aplicáveis.'+(averbacoesTruncadas?' Atenção: consulta de averbações atingiu o limite de 20.000 linhas.':'');
-    preencherSeletores();preencherFiltroRelatorio();preencherHistorico();atualizarPainel();mostrarAlertas();mostrarAgenda();mostrarRegistros();
-    dadosCarregados=true;
-    $('moduleMessage').hidden=true;
-    await carregarTelaAtual();
-  }catch(error){
-    if(!usuarioAtual || usuarioAtual.id!==v19UserId || token!==consultaDadosToken)return;
-    console.error('Erro ao carregar dados:',error);
-    const mensagem='Erro ao consultar dados: '+erroAmigavel(error);
-    $('recordsInfo').textContent=mensagem;
-    setMsg('moduleMessage',mensagem+' Use Atualizar para tentar novamente.',true);
-    $('moduleMessage').hidden=false;
-  }finally{
-    if(token===consultaDadosToken)$('refresh').disabled=false;
+function conferirConsulta(valida) {
+  if (!valida()) { const erro = new Error('Consulta substituída.'); erro.name = 'AbortError'; throw erro; }
+}
+async function resultadoConsulta(consulta) {
+  const resultado = await consulta;
+  if (resultado.error) throw resultado.error;
+  return resultado;
+}
+// Cursor por ID evita acumular páginas anteriores na memória. Sem teto de 20 mil.
+async function percorrerPorId(criarConsulta, consumir, valida = () => true) {
+  let ultimo = null;
+  while (true) {
+    conferirConsulta(valida);
+    let q = criarConsulta().order('id', { ascending: true }).limit(LOTE_CONSULTA);
+    if (ultimo !== null) q = q.gt('id', ultimo);
+    const { data } = await resultadoConsulta(q);
+    conferirConsulta(valida);
+    if (!data?.length) break;
+    await consumir(data);
+    const proximo = data[data.length - 1].id;
+    if (proximo === ultimo) throw new Error('A paginação não avançou. Atualize e tente novamente.');
+    ultimo = proximo;
   }
+}
+// Views existentes não têm ID próprio; a ordenação usa afastamento + ciclo.
+async function percorrerAverbacoes(criarConsulta, consumir, valida = () => true) {
+  let inicio = 0;
+  while (true) {
+    conferirConsulta(valida);
+    const { data } = await resultadoConsulta(criarConsulta()
+      .order('afastamento_id', { ascending: true }).order('numero_ciclo', { ascending: true })
+      .range(inicio, inicio + LOTE_CONSULTA - 1));
+    conferirConsulta(valida);
+    if (!data?.length) break;
+    await consumir(data);
+    inicio += data.length;
+  }
+}
+async function buscarAverbacoes(ids, valida) {
+  const dados = [], unicos = [...new Set(ids)];
+  for (let i = 0; i < unicos.length; i += 100) {
+    await percorrerAverbacoes(() => db.from('vw_averbacoes').select(COLUNAS_AVERBACAO)
+      .in('afastamento_id', unicos.slice(i, i + 100)), lote => dados.push(...lote), valida);
+  }
+  return dados;
+}
+function baixarCsv(linhas, nome) {
+  const csv = '\uFEFF' + linhas.map(l => l.map(celulaCsvSegura).join(';')).join('\r\n');
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+  const link = document.createElement('a'); link.href = url; link.download = nome;
+  document.body.appendChild(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 15000);
+}
+let consultaDadosToken = 0;
+async function carregarDados() {
+  if (!usuarioAtual) return;
+  const token = ++consultaDadosToken;
+  invalidarTelas();
+  const contexto = contextoConsulta(), valida = () => contexto() && token === consultaDadosToken;
+  $('refresh').disabled = true;
+  setMsg('moduleMessage', 'Atualizando cadastros...'); $('moduleMessage').hidden = false;
+  try {
+    const pessoas = [], categorias = [];
+    await Promise.all([
+      percorrerPorId(() => db.from('policiais').select('id,matricula,posto_graduacao,qra,nome_completo,ativo'), lote => pessoas.push(...lote), valida),
+      percorrerPorId(() => db.from('tipos_afastamento').select('id,sigla,descricao,dias_fixos,ativo'), lote => categorias.push(...lote), valida)
+    ]);
+    conferirConsulta(valida);
+    policiaisCatalogo = pessoas.sort((a,b) => a.nome_completo.localeCompare(b.nome_completo, 'pt-BR'));
+    tiposCatalogo = categorias.sort((a,b) => a.sigla.localeCompare(b.sigla, 'pt-BR'));
+    policiais = policiaisCatalogo.filter(p => p.ativo); tipos = tiposCatalogo.filter(t => t.ativo);
+    preencherSeletores(); preencherFiltroRelatorio(); preencherHistorico();
+    dadosCarregados = true; $('moduleMessage').hidden = true;
+    await carregarTelaAtual();
+  } catch (error) {
+    if (!valida() || error.name === 'AbortError') return;
+    console.error('Erro ao carregar dados:', error);
+    setMsg('moduleMessage', 'Erro ao consultar dados: ' + erroAmigavel(error) + ' Use Atualizar para tentar novamente.', true);
+    $('moduleMessage').hidden = false;
+  } finally {
+    if (token === consultaDadosToken) $('refresh').disabled = false;
+  }
+}
+
+function cancelarConsultasAtuais() {
+  consultaRegistrosToken++; historicoToken++; relatorioToken++; consultaAuditoriaToken++;
+  painelToken++; alertasToken++; agendaToken++; totaisRelatorioToken++;
+  clearTimeout(timerBuscaRegistros); indiceRegistros=null;
+  cancelarCsvRegistros=true; exportacaoRelatorioCancelada=true;
+  limparTotaisRelatorio();
 }

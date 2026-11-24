@@ -50,21 +50,22 @@ function preencherSeletores(){
   if([...p.options].some(o=>o.value===policialAnterior))p.value=policialAnterior;
   tipos.forEach(x=>t.appendChild(opcao(x.id,`${x.sigla} - ${x.descricao}`)));
   const filtro=$('filterPolicial'),selecionado=filtro.value;filtro.replaceChildren(opcao('','Todos'));
-  policiais.forEach(x=>filtro.appendChild(opcao(x.id,`${x.matricula} · ${x.qra}`)));filtro.value=selecionado;
-  const ft=$('filterTipo'),tipoAnterior=ft.value;ft.replaceChildren(opcao('','Todos'));tipos.forEach(x=>ft.appendChild(opcao(x.id,`${x.sigla} - ${x.descricao}`)));ft.value=tipoAnterior;
+  policiaisCatalogo.forEach(x=>filtro.appendChild(opcao(x.id,`${x.matricula} · ${x.qra}`)));filtro.value=selecionado;
+  const ft=$('filterTipo'),tipoAnterior=ft.value;ft.replaceChildren(opcao('','Todos'));tiposCatalogo.forEach(x=>ft.appendChild(opcao(x.id,`${x.sigla} - ${x.descricao}`)));ft.value=tipoAnterior;
 }
 $('policialBusca').addEventListener('input',filtrarPoliciaisCadastro);
 function preencherFiltroRelatorio(){
   const p=$('reportPolicial'),t=$('reportTipo'),pv=p.value,tv=t.value;
   p.replaceChildren(opcao('','Todos'));t.replaceChildren(opcao('','Todos'));
-  policiais.forEach(x=>p.appendChild(opcao(x.id,`${x.matricula} · ${x.qra} · ${x.nome_completo}`)));
-  tipos.forEach(x=>t.appendChild(opcao(x.id,`${x.sigla} - ${x.descricao}`)));
+  policiaisCatalogo.forEach(x=>p.appendChild(opcao(x.id,`${x.matricula} · ${x.qra} · ${x.nome_completo}`)));
+  tiposCatalogo.forEach(x=>t.appendChild(opcao(x.id,`${x.sigla} - ${x.descricao}`)));
   p.value=pv;t.value=tv;
 }
 function atualizarTipo(){const t=tipos.find(x=>String(x.id)===$('tipo').value);if(t&&t.dias_fixos!==null){$('dias').value=t.dias_fixos;$('dias').readOnly=true;}else{$('dias').value='';$('dias').readOnly=false;}calcularTermino();}
 function calcularTermino(){const ini=$('inicio').value,n=Number($('dias').value);$('fim').value=ini&&Number.isInteger(n)&&n>=1&&n<=3650?somarDias(ini,n-1):'';}
 function limparFormulario(){
   editandoId=null;
+  preencherSeletores();
   $('afastamentoForm').reset();$('dias').readOnly=false;
   $('policial').disabled=false;
   $('policialBusca').disabled=false;$('policialBusca').value='';filtrarPoliciaisCadastro();
@@ -80,13 +81,15 @@ function editarRegistro(id){
   if(!r||r.cancelado_em)return;
   editandoId=r.id;
   $('policialBusca').value='';filtrarPoliciaisCadastro();
+  if(![...$('policial').options].some(o=>o.value===String(r.policial_id)))$('policial').appendChild(opcao(r.policial_id,`${r.policiais?.matricula||r.policial_id} · ${r.policiais?.nome_completo||'Cadastro inativo'}`));
+  if(![...$('tipo').options].some(o=>o.value===String(r.tipo_id)))$('tipo').appendChild(opcao(r.tipo_id,r.tipos_afastamento?.sigla||'Tipo inativo'));
   $('policial').value=String(r.policial_id);
   $('policialBusca').disabled=true;
   $('policial').disabled=true; // Evita mover um afastamento para outro policial.
   $('tipo').value=String(r.tipo_id);
   $('inicio').value=r.data_inicio;
   $('observacoes').value=r.observacoes||'';
-  const t=tipos.find(x=>String(x.id)===String(r.tipo_id));
+  const t=tiposCatalogo.find(x=>String(x.id)===String(r.tipo_id));
   $('dias').value=String(r.dias);
   $('dias').readOnly=t?.dias_fixos!==null && t?.dias_fixos!==undefined;
   calcularTermino();
@@ -104,7 +107,7 @@ async function salvarAfastamento(){
     if(editandoId!==null&&!ehAdmin())throw new Error('Apenas administradores podem editar registros.');
     const policial_id=Number($('policial').value),tipo_id=Number($('tipo').value),data_inicio=$('inicio').value,data_fim=$('fim').value,dias=Number($('dias').value);
     if(!policial_id||!tipo_id||!data_inicio||!data_fim||!Number.isInteger(dias)||dias<1)throw new Error('Preencha todos os campos obrigatórios.');
-    const t=tipos.find(x=>x.id===tipo_id);
+    const t=tiposCatalogo.find(x=>x.id===tipo_id);
     if(t?.dias_fixos!==null&&t?.dias_fixos!==undefined&&dias!==t.dias_fixos)throw new Error('A duração deve respeitar os dias fixos do tipo.');
     botao.disabled=true;setMsg('formMessage','Salvando...');
     const payload={tipo_id,data_inicio,data_fim,observacoes:$('observacoes').value.trim()||null};

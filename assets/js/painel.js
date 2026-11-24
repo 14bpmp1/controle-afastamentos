@@ -1,19 +1,10 @@
 'use strict';
 
 function situacao(r){const h=hojeISO();if(r.cancelado_em)return 'Cancelado';if(r.data_fim<h)return 'Encerrado';if(r.data_inicio>h)return 'Programado';return 'Ativo';}
-function atualizarPainel(){
-  const h=hojeISO(),limite=somarDias(h,5),validos=registros.filter(r=>!r.cancelado_em),ativos=validos.filter(r=>r.data_inicio<=h&&r.data_fim>=h);
-  $('statPoliciais').textContent=policiais.length;
-  $('statAtivos').textContent=ativos.length;
-  $('statProximos').textContent=ativos.filter(r=>r.data_fim<=limite).length;
-  $('statEncerrados').textContent=validos.filter(r=>r.data_fim<h).length;
-  const ciclos=new Set(averbacoes.filter(a=>a.situacao_averbacao==='AVERBAR').map(a=>`${a.policial_id}:${a.numero_ciclo}`));
-  $('statAverbacoes').textContent=erroView?'—':ciclos.size;
-}
 // V13: exportacao dos alertas visiveis, sem alterar registros ou regras de averbacao.
 function alertasDoPeriodo(){
   const h=hojeISO(),janela=Number($('alertsWindow').value)||5,limite=somarDias(h,janela);
-  return registros.filter(r=>!r.cancelado_em && r.data_inicio<=h && r.data_fim>=h && r.data_fim<=limite)
+  return dadosAlertas.filter(r=>!r.cancelado_em && r.data_inicio<=h && r.data_fim>=h && r.data_fim<=limite)
     .sort((a,b)=>a.data_fim.localeCompare(b.data_fim)||String(a.policiais?.matricula||'').localeCompare(String(b.policiais?.matricula||'')));
 }
 function exportarAlertasCsv(){
@@ -48,13 +39,13 @@ function mostrarAlertas(){
     valores.forEach((v,i)=>{const td=document.createElement('td');td.textContent=v;if(i===5 && dias<=1){const tag=document.createElement('span');tag.className='tag soon';tag.textContent=v;td.replaceChildren(tag);}tr.appendChild(td);});
     tbody.appendChild(tr);
   }
-  info.textContent='*Retorno previsto é o dia seguinte ao término, sem considerar fins de semana, feriados, prorrogações ou novas licenças. O painel não envia notificações automáticas.'+(registrosTruncados?' Atenção: a consulta atingiu o limite de 20.000 afastamentos; os alertas podem estar incompletos.':'');
+  info.textContent='*Retorno previsto é o dia seguinte ao término, sem considerar fins de semana, feriados, prorrogações ou novas licenças. O painel não envia notificações automáticas.';
 }
-$('alertsWindow').addEventListener('change',mostrarAlertas);
+$('alertsWindow').addEventListener('change',()=>{void carregarAlertas();});
 // V14: agenda de afastamentos futuros; leitura somente dos dados já carregados.
 function agendaDoPeriodo(){
   const h=hojeISO(),dias=Number($('agendaWindow').value)||30,limite=somarDias(h,dias);
-  return registros.filter(r=>!r.cancelado_em && r.data_inicio>h && r.data_inicio<=limite)
+  return dadosAgenda.filter(r=>!r.cancelado_em && r.data_inicio>h && r.data_inicio<=limite)
     .sort((a,b)=>a.data_inicio.localeCompare(b.data_inicio)||String(a.policiais?.matricula||'').localeCompare(String(b.policiais?.matricula||'')));
 }
 function mostrarAgenda(){
@@ -69,7 +60,7 @@ function mostrarAgenda(){
     const valores=[r.policiais?.matricula||'',r.policiais?.qra||'',r.policiais?.nome_completo||'',r.tipos_afastamento?.sigla||'',formatarData(r.data_inicio),formatarData(r.data_fim),r.dias,faltam===1?'Amanhã':`${faltam} dias`];
     const tr=document.createElement('tr');valores.forEach(v=>{const td=document.createElement('td');td.textContent=String(v??'');tr.appendChild(td);});tbody.appendChild(tr);
   }
-  $('agendaInfo').textContent='Somente afastamentos com início após hoje. Consulta baseada nos registros carregados.'+(registrosTruncados?' Atenção: a base atingiu o limite de 20.000 registros; a agenda pode estar incompleta.':'');
+  $('agendaInfo').textContent='Somente afastamentos com início após hoje, consultados para o período selecionado.';
 }
 function exportarAgendaCsv(){
   const dados=agendaDoPeriodo(),h=hojeISO();
@@ -84,5 +75,63 @@ function exportarAgendaCsv(){
   const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
   const link=document.createElement('a');link.href=url;link.download='agenda_afastamentos_'+h+'.csv';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
-$('agendaWindow').addEventListener('change',mostrarAgenda);
+$('agendaWindow').addEventListener('change',()=>{void carregarAgenda();});
 $('agendaCsv').addEventListener('click',exportarAgendaCsv);
+
+let dadosAlertas = [], dadosAgenda = [];
+let painelToken = 0, alertasToken = 0, agendaToken = 0;
+async function carregarListaPeriodo(tipo) {
+  const ehAlerta = tipo === 'alerts', token = ehAlerta ? ++alertasToken : ++agendaToken;
+  const contexto = contextoConsulta(), valida = () => contexto() && token === (ehAlerta ? alertasToken : agendaToken);
+  const h = hojeISO(), limite = somarDias(h, Number($(tipo+'Window').value));
+  $(tipo+'Csv').disabled = true; $(tipo+'Body').replaceChildren(); $(tipo+'Summary').replaceChildren();
+  $(tipo+'Info').textContent = 'Consultando período...';
+  try {
+    const dados = [];
+    await percorrerPorId(() => {
+      let q = db.from('afastamentos').select(COLUNAS_AFASTAMENTO).is('cancelado_em',null);
+      return ehAlerta ? q.lte('data_inicio',h).gte('data_fim',h).lte('data_fim',limite) : q.gt('data_inicio',h).lte('data_inicio',limite);
+    }, lote=>dados.push(...lote), valida);
+    conferirConsulta(valida);
+    if (ehAlerta) { dadosAlertas=dados; mostrarAlertas(); } else { dadosAgenda=dados; mostrarAgenda(); }
+    $(tipo+'Csv').disabled = !dados.length;
+  } catch (error) {
+    if (!valida() || error.name==='AbortError') return;
+    if (ehAlerta) dadosAlertas=[]; else dadosAgenda=[];
+    $(tipo+'Info').textContent = 'Não foi possível consultar o período: ' + erroAmigavel(error);
+  }
+}
+function carregarAlertas() { return carregarListaPeriodo('alerts'); }
+function carregarAgenda() { return carregarListaPeriodo('agenda'); }
+async function carregarPainel() {
+  const token = ++painelToken, contexto = contextoConsulta(), valida = () => contexto() && token === painelToken && rotaAtual === 'painel';
+  const h=hojeISO();
+  $('statPoliciais').textContent=policiais.length;
+  for(const id of ['statAtivos','statProximos','statEncerrados','statAverbacoes'])$(id).textContent='—';
+  $('panelInfo').textContent='Atualizando indicadores...';
+  const contar = q => resultadoConsulta(q).then(r=>r.count??0);
+  const [contagens, ciclos] = await Promise.allSettled([
+    Promise.all([
+      contar(db.from('afastamentos').select('id',{count:'exact',head:true}).is('cancelado_em',null).lte('data_inicio',h).gte('data_fim',h)),
+      contar(db.from('afastamentos').select('id',{count:'exact',head:true}).is('cancelado_em',null).lte('data_inicio',h).gte('data_fim',h).lte('data_fim',somarDias(h,5))),
+      contar(db.from('afastamentos').select('id',{count:'exact',head:true}).is('cancelado_em',null).lt('data_fim',h)),
+      carregarAlertas()
+    ]),
+    (async()=>{
+      const unicos=new Set();
+      await percorrerAverbacoes(()=>db.from('vw_averbacoes').select('afastamento_id,policial_id,numero_ciclo').eq('situacao_averbacao','AVERBAR'),lote=>{
+        for(const a of lote)unicos.add(`${a.policial_id}:${a.numero_ciclo}`);
+      },valida);
+      return unicos.size;
+    })()
+  ]);
+  if(!valida())return;
+  if(contagens.status==='fulfilled'){
+    ['statAtivos','statProximos','statEncerrados'].forEach((id,i)=>$(id).textContent=contagens.value[i]);
+  }
+  if(ciclos.status==='fulfilled')$('statAverbacoes').textContent=ciclos.value;
+  $('panelInfo').textContent = contagens.status==='rejected'
+    ? 'Indicadores indisponíveis: '+erroAmigavel(contagens.reason)
+    : ciclos.status==='rejected' ? 'Contagens de afastamentos atualizadas. Não foi possível consultar os ciclos de averbação.'
+    : 'Indicadores atualizados.';
+}

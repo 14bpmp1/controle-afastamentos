@@ -3,19 +3,20 @@
 // V5: gerenciamento de cadastros com RLS no servidor.
 async function carregarCadastros(){
   if(!ehAdmin())return;
-  const sessao=usuarioAtual;
-  const [p,t]=await Promise.all([
-    db.from('policiais').select('id,matricula,posto_graduacao,qra,nome_completo,ativo').order('matricula'),
-    db.from('tipos_afastamento').select('id,sigla,descricao,dias_fixos,ativo').order('sigla')
-  ]);
-  if(usuarioAtual!==sessao || !ehAdmin())return;
-  if(p.error||t.error){
-    const erro=p.error||t.error;
-    setMsg('admMsgPolicial','Não foi possível consultar os cadastros: '+erroAmigavel(erro),true);
-    return;
+  const valida=contextoConsulta(), pessoas=[], categorias=[];
+  try{
+    await Promise.all([
+      percorrerPorId(()=>db.from('policiais').select('id,matricula,posto_graduacao,qra,nome_completo,ativo'),lote=>pessoas.push(...lote),valida),
+      percorrerPorId(()=>db.from('tipos_afastamento').select('id,sigla,descricao,dias_fixos,ativo'),lote=>categorias.push(...lote),valida)
+    ]);
+    conferirConsulta(valida);
+    todosPoliciais=pessoas.sort((a,b)=>a.matricula.localeCompare(b.matricula,'pt-BR'));
+    todosTipos=categorias.sort((a,b)=>a.sigla.localeCompare(b.sigla,'pt-BR'));
+    renderizarCadastros();
+  }catch(error){
+    if(!valida()||error.name==='AbortError')return;
+    setMsg('admMsgPolicial','Não foi possível consultar os cadastros: '+erroAmigavel(error),true);
   }
-  todosPoliciais=p.data||[];todosTipos=t.data||[];
-  renderizarCadastros();
 }
 function celula(tr,valor){const td=document.createElement('td');td.textContent=String(valor??'');tr.appendChild(td);return td;}
 function botaoAcao(td,rotulo,acao){
