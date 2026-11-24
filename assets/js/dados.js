@@ -98,5 +98,22 @@ function cancelarConsultasAtuais() {
   painelToken++; alertasToken++; agendaToken++; totaisRelatorioToken++;
   clearTimeout(timerBuscaRegistros); indiceRegistros=null;
   cancelarCsvRegistros=true; exportacaoRelatorioCancelada=true;
-  limparTotaisRelatorio();
+  limparTotaisRelatorio(); limparHistoricoCompleto(); limparImpressaoCompleta();
+}
+
+// Mesma ordenação da tabela para CSVs completos e impressão, sem limite de páginas.
+async function percorrerAfastamentosOrdenados(criarConsulta, consumir, valida) {
+  let ultimo=null;
+  while(true) {
+    conferirConsulta(valida);
+    let q=criarConsulta().order('data_inicio',{ascending:false}).order('id',{ascending:false}).limit(LOTE_CONSULTA);
+    if(ultimo)q=q.or(`data_inicio.lt.${ultimo.data_inicio},and(data_inicio.eq.${ultimo.data_inicio},id.lt.${ultimo.id})`);
+    const {data}=await resultadoConsulta(q);
+    conferirConsulta(valida);
+    if(!data?.length)break;
+    await consumir(data);
+    const proximo=data[data.length-1];
+    if(ultimo&&proximo.id===ultimo.id&&proximo.data_inicio===ultimo.data_inicio)throw new Error('A consulta não avançou. Atualize e tente novamente.');
+    ultimo={id:proximo.id,data_inicio:proximo.data_inicio};
+  }
 }

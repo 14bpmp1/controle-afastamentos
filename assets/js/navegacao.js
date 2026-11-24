@@ -62,6 +62,7 @@ function renderizarRota({ carregar = true, foco = false } = {}) {
   if(rotaAtual==='afastamentos' && destino!==rotaAtual){
     consultaRegistrosToken++; clearTimeout(timerBuscaRegistros); consultasTela.delete(rotaAtual);
   }
+  if(rotaAtual==='relatorios'&&destino!==rotaAtual)limparImpressaoCompleta();
   rotaAtual = destino;
   const tela = TELAS[rotaAtual], hash = '#/' + rotaAtual;
   if (window.location.hash !== hash) history.replaceState(null, '', hash);

@@ -87,21 +87,26 @@
     <div><label for="historyEnd">Até (início do afastamento)</label><input type="date" id="historyEnd"></div>
     <div><label for="historyCancelados">Incluir cancelados</label><select id="historyCancelados"><option value="nao">Não</option><option value="sim">Sim</option></select></div>
   </div>
+  <h3>Totais do filtro</h3>
+  <p class="help">A quantidade de afastamentos é consultada automaticamente. Use Calcular totais para obter dias, tipos e cancelamentos de todas as páginas.</p>
   <div class="history-summary">
     <div class="stat"><span>Afastamentos</span><strong id="historyCount">—</strong></div>
-    <div class="stat"><span>Dias nesta página*</span><strong id="historyDays">—</strong></div>
-    <div class="stat"><span>Tipos nesta página</span><strong id="historyTypes">—</strong></div>
-    <div class="stat"><span>Cancelados na página</span><strong id="historyCanceled">—</strong></div>
+    <div class="stat"><span>Dias no filtro*</span><strong id="historyDays">—</strong></div>
+    <div class="stat"><span>Tipos no filtro</span><strong id="historyTypes">—</strong></div>
+    <div class="stat"><span>Cancelados no filtro</span><strong id="historyCanceled">—</strong></div>
   </div>
-  <div class="actions"><button type="button" class="secondary" id="historyClear">Limpar filtros</button><button type="button" class="primary" id="historyCsv">Exportar histórico CSV</button></div>
+  <div class="actions"><button type="button" class="secondary" id="historyClear">Limpar filtros</button><button type="button" class="primary" id="historyCsv">Exportar página CSV</button></div>
+  <div class="actions"><button type="button" class="secondary" id="historyTotals" disabled>Calcular totais do histórico</button><button type="button" class="secondary" id="historyTotalsCancel" hidden>Cancelar cálculo</button><button type="button" class="primary" id="historyCsvFull" disabled>Exportar histórico completo CSV</button><button type="button" class="secondary" id="historyCancelExport" hidden>Cancelar exportação</button></div>
+<p class="muted" id="historyTotalsStatus" role="status"></p><p class="muted" id="historyExportStatus" role="status"></p>
   <div class="table-wrap" style="margin-top:15px"><table><thead><tr><th>Tipo</th><th>Início</th><th>Término</th><th>Dias</th><th>Situação</th><th>Averbação indicativa</th><th>Início do ciclo</th><th>Fim do ciclo</th></tr></thead><tbody id="historyBody"></tbody></table></div>
   <div class="actions"><button type="button" class="secondary" id="historyPrev">← Anterior</button><span id="historyPageLabel" style="align-self:center">Página 1</span><button type="button" class="secondary" id="historyNext">Próxima →</button></div>
   <p class="history-note" id="historyInfo">Selecione um policial para consultar o histórico. *Dias acumulados são a soma das durações dos registros não cancelados no filtro, não dias únicos de calendário.</p>
 </section>
 <section class="panel" id="reportPanel" data-screen hidden>
 <h2>Relatório gerencial</h2>
-<p class="help">Relatório por data de início, consultado diretamente no Supabase. Exibe 100 registros por página; cancelados são excluídos. Os totais de policiais e dias correspondem à página atual. O CSV da página e a impressão abrangem apenas a página exibida; o novo CSV completo percorre todas as páginas do filtro. Averbação permanece indicativa.</p>
+<p class="help">Escolha entre afastamentos iniciados no período e aqueles que estiveram em andamento em qualquer dia do intervalo. Cancelados são excluídos. Dias somam a duração integral dos afastamentos encontrados. A tabela exibe 100 registros por página; as opções completas incluem todo o filtro.</p>
 <div class="filter-row">
+<div><label for="reportPeriodMode">Critério do período</label><select id="reportPeriodMode"><option value="inicio">Iniciados no período</option><option value="intersecao">Afastados no período</option></select></div>
 <div><label for="reportStart">Início do período</label><input id="reportStart" type="date"></div>
 <div><label for="reportEnd">Fim do período</label><input id="reportEnd" type="date"></div>
 <div><label for="reportPolicial">Policial</label><select id="reportPolicial"><option value="">Todos</option></select></div>
@@ -118,7 +123,8 @@
 <div class="report-stat"><span>Policiais distintos em todo o filtro</span><strong id="reportTotalPeople">—</strong></div>
 <div class="report-stat"><span>Dias somados em todo o filtro</span><strong id="reportTotalDays">—</strong></div>
 </div><p class="report-note" id="reportTotalsStatus" role="status"></p>
-<div class="actions"><button type="button" class="secondary" id="reportClear">Limpar filtros</button><button type="button" class="primary" id="reportPrint">Imprimir / Salvar PDF</button><button type="button" class="secondary" id="reportCsv">Exportar página CSV</button><button type="button" class="primary" id="reportCsvFull">Exportar relatório completo CSV</button></div><button type="button" class="secondary" id="reportCancelExport" hidden>Cancelar exportação</button><p class="muted" id="reportExportStatus" role="status" aria-live="polite"></p>
+<div class="actions"><button type="button" class="secondary" id="reportClear">Limpar filtros</button><button type="button" class="primary" id="reportPrint">Imprimir página</button><button type="button" class="secondary" id="reportCsv">Exportar página CSV</button><button type="button" class="primary" id="reportCsvFull">Exportar relatório completo CSV</button></div><button type="button" class="secondary" id="reportCancelExport" hidden>Cancelar exportação</button><p class="muted" id="reportExportStatus" role="status" aria-live="polite"></p>
+<div class="actions"><button type="button" class="primary" id="reportPrintFull" disabled>Imprimir relatório completo / Salvar PDF</button><button type="button" class="secondary" id="reportCancelPrint" hidden>Cancelar preparação</button></div><p class="muted" id="reportPrintStatus" role="status"></p>
 <p class="report-print-title" id="reportPrintInfo"></p>
 <div class="table-wrap" style="margin-top:15px"><table><thead><tr><th>Matrícula</th><th>QRA</th><th>Nome</th><th>Tipo</th><th>Início</th><th>Término</th><th>Dias</th><th>Situação</th></tr></thead><tbody id="reportBody"></tbody></table></div>
 <div class="audit-actions"><button type="button" class="secondary" id="reportPrev">← Página anterior</button><span id="reportPageLabel" role="status" style="align-self:center">Página 1</span><button type="button" class="secondary" id="reportNext">Próxima página →</button></div><p class="muted" id="reportInfo"></p>
@@ -184,6 +190,7 @@
 </section>
 </section>
 </main>
+<section id="completePrint" aria-label="Relatório completo para impressão" hidden></section>
 <button type="button" class="v11-top" id="v11Top" hidden aria-label="Voltar ao início da tela">Início da tela</button>
 <div class="v19-overlay" id="v19TimeoutOverlay" hidden>
   <div class="v19-dialog" role="alertdialog" aria-modal="true" aria-labelledby="v19TimeoutTitle" aria-describedby="v19TimeoutText">
@@ -204,6 +211,7 @@
 <script defer src="./assets/js/registros.js"></script>
 <script defer src="./assets/js/historico.js"></script>
 <script defer src="./assets/js/relatorios.js"></script>
+<script defer src="./assets/js/impressao.js"></script>
 <script defer src="./assets/js/eventos.js"></script>
 <script defer src="./assets/js/cadastros.js"></script>
 <script defer src="./assets/js/usuarios.js"></script>
