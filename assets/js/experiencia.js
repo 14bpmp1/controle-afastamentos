@@ -47,7 +47,9 @@ function reiniciarProtecaoFormularios() {
   for(const [id,rotulo,campos] of [
     ['afastamentoForm','Afastamento',['policial','tipo','inicio','dias','observacoes']],
     ['policialAdminForm','Cadastro de policial',['admMatricula','admPosto','admQra','admNome']],
-    ['tipoAdminForm','Tipo de afastamento',['admSigla','admDescricao','admDiasFixos']]
+    ['tipoAdminForm','Tipo de afastamento',['admSigla','admDescricao','admDiasFixos']],
+    ['descansoPrevisaoForm','Previsão de férias',['descansoPrevisao']],
+    ['descansoPeriodoForm','Período de férias/abono',['descansoTipo','descansoInicio','descansoDias']]
   ])protegerCampos(id,rotulo,campos.map($));
 }
 document.addEventListener('input',atualizarAvisoAlteracoes);

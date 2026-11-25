@@ -27,6 +27,7 @@
     <a href="#/novo-afastamento" title="Novo afastamento"><span class="v20-menu-icon" aria-hidden="true">＋</span><span class="v20-menu-label">Novo afastamento</span></a>
     <a href="#/afastamentos" title="Registros"><span class="v20-menu-icon" aria-hidden="true">☷</span><span class="v20-menu-label">Registros</span></a>
     <a href="#/historico" title="Histórico individual"><span class="v20-menu-icon" aria-hidden="true">◷</span><span class="v20-menu-label">Histórico individual</span></a>
+    <a href="#/ferias-abono" title="Férias e abono"><span class="v20-menu-icon" aria-hidden="true">☀</span><span class="v20-menu-label">Férias e abono</span></a>
     <a href="#/relatorios" title="Relatórios"><span class="v20-menu-icon" aria-hidden="true">▥</span><span class="v20-menu-label">Relatórios</span></a>
     <a class="v11-admin-link" href="#/cadastros" hidden title="Cadastros"><span class="v20-menu-icon" aria-hidden="true">♙</span><span class="v20-menu-label">Cadastros</span></a>
     <a class="v11-admin-link" href="#/usuarios" hidden title="Usuários"><span class="v20-menu-icon" aria-hidden="true">♙</span><span class="v20-menu-label">Usuários</span></a>
@@ -103,6 +104,42 @@
   <div class="table-wrap" style="margin-top:15px"><table><thead><tr><th>Tipo</th><th>Início</th><th>Término</th><th>Dias</th><th>Situação</th><th>Averbação indicativa</th><th>Início do ciclo</th><th>Fim do ciclo</th></tr></thead><tbody id="historyBody"></tbody></table></div>
   <div class="actions"><button type="button" class="secondary" id="historyPrev">← Anterior</button><span id="historyPageLabel" style="align-self:center">Página 1</span><button type="button" class="secondary" id="historyNext">Próxima →</button></div>
   <p class="history-note" id="historyInfo">Selecione um policial para consultar o histórico. *Dias acumulados são a soma das durações dos registros não cancelados no filtro, não dias únicos de calendário.</p>
+</section>
+<section class="panel" id="descansoPanel" data-screen hidden aria-labelledby="descansoTitle">
+<h2 id="descansoTitle">Férias e abono</h2>
+<p class="help">Controle por ano de referência: 30 dias de férias em até três parcelas e cinco dias de abono juntos ou separados. Dias corridos, incluindo a data inicial. Períodos futuros também descontam do saldo.</p>
+<div class="filter-row">
+<div><label for="descansoBusca">Nome, QRA ou matrícula</label><input id="descansoBusca" type="search" autocomplete="off" placeholder="Buscar policial"></div>
+<div><label for="descansoPolicial">Policial</label><select id="descansoPolicial"><option value="">Selecione um policial</option></select></div>
+<div><label for="descansoAno">Ano de referência</label><input id="descansoAno" type="number" min="1900" max="9998" required></div>
+</div>
+<div class="actions"><button id="descansoAtualizar" type="button" class="secondary">Atualizar férias e abono</button></div>
+<p id="descansoMensagem" class="msg" role="status"></p>
+<div id="descansoDetalhes" hidden>
+<div class="report-stats">
+<div class="report-stat"><span>Férias registradas / saldo</span><strong id="descansoSaldoFerias">—</strong></div>
+<div class="report-stat"><span>Parcelas de férias</span><strong id="descansoParcelas">—</strong></div>
+<div class="report-stat"><span>Abono registrado / saldo</span><strong id="descansoSaldoAbono">—</strong></div>
+</div>
+<form id="descansoPrevisaoForm" class="admin-form">
+<h3>Previsão de férias</h3>
+<label for="descansoPrevisao">Mês/ano em que deveria tirar férias</label><input id="descansoPrevisao" type="month" min="1900-01" max="9998-12" required>
+<div class="actions"><button id="descansoSalvarPrevisao" type="submit" class="primary">Salvar previsão</button></div>
+</form>
+<form id="descansoPeriodoForm" class="admin-form">
+<h3 id="descansoPeriodoTitulo">Registrar utilização</h3>
+<p class="help">As datas podem pertencer a outro ano; o saldo é descontado do ano de referência selecionado. Para dias de abono separados, registre um período para cada sequência de dias.</p>
+<div class="grid">
+<div><label for="descansoTipo">Tipo</label><select id="descansoTipo"><option value="ferias">Férias</option><option value="abono">Abono</option></select></div>
+<div><label for="descansoInicio">Data inicial</label><input id="descansoInicio" type="date" min="1900-01-01" max="9998-12-31" required></div>
+<div><label for="descansoDias">Quantidade de dias</label><input id="descansoDias" type="number" min="1" max="30" required></div>
+<div><label for="descansoFim">Término calculado</label><input id="descansoFim" type="date" readonly></div>
+</div>
+<div class="actions"><button id="descansoSalvarPeriodo" type="submit" class="primary">Salvar período</button><button id="descansoLimparPeriodo" type="button" class="secondary">Limpar / sair da edição</button></div>
+</form>
+<p class="help">Usuários ativos podem cadastrar. Administradores podem corrigir e cancelar. Cancelamentos ficam no histórico e liberam o saldo.</p>
+<div class="table-wrap"><table><thead><tr><th>Tipo</th><th>Início</th><th>Término</th><th>Mês/ano real (início)</th><th>Dias</th><th>Situação</th><th>Ações</th></tr></thead><tbody id="descansoBody"></tbody></table></div>
+</div>
 </section>
 <section class="panel" id="reportPanel" data-screen hidden>
 <h2>Relatório gerencial</h2>
@@ -220,6 +257,7 @@
 <script defer src="./assets/js/eventos.js"></script>
 <script defer src="./assets/js/cadastros.js"></script>
 <script defer src="./assets/js/usuarios.js"></script>
+<script defer src="./assets/js/descanso.js"></script>
 <script defer src="./assets/js/navegacao.js"></script>
 <script defer src="./assets/js/app.js"></script>
 </body>

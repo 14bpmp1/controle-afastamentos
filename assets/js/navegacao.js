@@ -8,6 +8,7 @@ const TELAS = {
   'novo-afastamento': { titulo: 'Novo afastamento', paineis: ['v11Cadastro'] },
   afastamentos: { titulo: 'Registros de afastamentos', paineis: ['v11Registros'], carregar: () => consultarRegistros() },
   historico: { titulo: 'Histórico individual', paineis: ['historyPanel'], carregar: () => consultarHistorico() },
+  'ferias-abono': { titulo: 'Férias e abono', paineis: ['descansoPanel'], carregar: () => carregarDescanso() },
   relatorios: { titulo: 'Relatórios', paineis: ['reportPanel'], carregar: () => consultarRelatorio() },
   cadastros: { titulo: 'Administração de cadastros', paineis: ['cadastrosPanel'], admin: true, carregar: () => carregarCadastros() },
   usuarios: { titulo: 'Usuários', paineis: ['usuariosPanel'], admin: true, carregar: () => carregarUsuarios() },

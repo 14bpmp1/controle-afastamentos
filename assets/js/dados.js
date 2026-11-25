@@ -83,7 +83,7 @@ async function carregarDados() {
     policiaisCatalogo = pessoas.sort((a,b) => a.nome_completo.localeCompare(b.nome_completo, 'pt-BR'));
     tiposCatalogo = categorias.sort((a,b) => a.sigla.localeCompare(b.sigla, 'pt-BR'));
     policiais = policiaisCatalogo.filter(p => p.ativo); tipos = tiposCatalogo.filter(t => t.ativo);
-    preencherSeletores(); preencherFiltroRelatorio(); preencherHistorico();atualizarAvisoAlteracoes();
+    preencherSeletores(); preencherFiltroRelatorio(); preencherHistorico();preencherPoliciaisDescanso();atualizarAvisoAlteracoes();
     concluirConsultaTela('base');
     dadosCarregados = true; $('moduleMessage').hidden = true;
     await carregarTelaAtual();
@@ -100,6 +100,7 @@ async function carregarDados() {
 }
 
 function cancelarConsultasAtuais() {
+  descansoToken++;
   consultaRegistrosToken++; historicoToken++; relatorioToken++; consultaAuditoriaToken++;
   painelToken++; alertasToken++; agendaToken++; totaisRelatorioToken++;
   clearTimeout(timerBuscaRegistros); indiceRegistros=null;
