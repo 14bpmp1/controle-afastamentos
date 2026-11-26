@@ -36,13 +36,14 @@ function bloquearDescanso(ocupado) {
   descansoOcupado=ocupado;
   for(const id of ['descansoBusca','descansoPolicial','descansoAno','descansoAtualizar','descansoSalvarPrevisao','descansoSalvarPeriodo','descansoLimparPeriodo'])$(id).disabled=ocupado;
   // Um envio captura valores imutáveis; também bloqueia os campos até a resposta.
-  for(const id of ['descansoPrevisao','descansoInicio','descansoDias'])$(id).disabled=ocupado;
+  for(const id of ['descansoPrevisaoMes','descansoPrevisaoAno','descansoInicio','descansoDias'])$(id).disabled=ocupado;
   $('descansoTipo').disabled=ocupado||Boolean(descansoEdicao);
   $('descansoBody').querySelectorAll('button').forEach(b=>b.disabled=ocupado);
   if(!ocupado&&descansoContexto) {
     const pessoa=policiaisCatalogo.find(p=>String(p.id)===descansoContexto.policial);
     $('descansoSalvarPrevisao').disabled=Boolean(descansoControle&&!ehAdmin())||!pessoa?.ativo;
-    $('descansoPrevisao').disabled=$('descansoSalvarPrevisao').disabled;
+    $('descansoPrevisaoMes').disabled=$('descansoSalvarPrevisao').disabled;
+    $('descansoPrevisaoAno').disabled=$('descansoSalvarPrevisao').disabled;
     $('descansoSalvarPeriodo').disabled=!pessoa?.ativo&&!descansoEdicao;
   }
 }
@@ -83,7 +84,9 @@ async function carregarDescanso() {
     ]);
     conferirConsulta(valida);descansoControle=controle;descansoPeriodos=periodos;
     if(!temAlteracoesNaoSalvas('descansoPrevisaoForm')) {
-      $('descansoPrevisao').value=controle?.mes_previsto?.slice(0,7)||'';registrarFormularioSalvo('descansoPrevisaoForm');
+      $('descansoPrevisaoMes').value=controle?.mes_previsto?.slice(5,7)||'';
+      $('descansoPrevisaoAno').value=controle?.mes_previsto?.slice(0,4)||String(ctx.ano);
+      registrarFormularioSalvo('descansoPrevisaoForm');
     }
     renderizarDescanso();$('descansoDetalhes').hidden=false;bloquearDescanso(false);
     concluirConsultaTela('ferias-abono');setMsg('descansoMensagem','Consulta concluída. O mês real corresponde ao início de cada período.');
@@ -157,8 +160,9 @@ async function executarGravacaoDescanso(nome,parametros,aposSalvar) {
 }
 async function salvarPrevisaoDescanso() {
   if(!descansoContexto)return;
-  const mes=$('descansoPrevisao').value;
-  if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(mes))return setMsg('descansoMensagem','Informe o mês/ano previsto.',true);
+  const ano=Number($('descansoPrevisaoAno').value),mesEscolhido=$('descansoPrevisaoMes').value;
+  if(!Number.isInteger(ano)||ano<1900||ano>9998||!/^(0[1-9]|1[0-2])$/.test(mesEscolhido))return setMsg('descansoMensagem','Escolha o mês e informe um ano entre 1900 e 9998.',true);
+  const mes=String(ano)+'-'+mesEscolhido;
   await executarGravacaoDescanso('salvar_previsao_ferias',{p_policial_id:descansoContexto.policial,p_ano:descansoContexto.ano,p_mes:mes+'-01'},()=>registrarFormularioSalvo('descansoPrevisaoForm'));
 }
 async function salvarPeriodoDescanso() {

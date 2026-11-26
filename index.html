@@ -123,7 +123,14 @@
 </div>
 <form id="descansoPrevisaoForm" class="admin-form">
 <h3>Previsão de férias</h3>
-<label for="descansoPrevisao">Mês/ano em que deveria tirar férias</label><input id="descansoPrevisao" type="month" min="1900-01" max="9998-12" required>
+<p class="help">Escolha o mês e o ano em que deveria tirar férias.</p>
+<div class="grid">
+<div><label for="descansoPrevisaoMes">Mês previsto</label><select id="descansoPrevisaoMes" required>
+<option value="">Selecione o mês</option>
+<option value="01">Janeiro</option><option value="02">Fevereiro</option><option value="03">Março</option><option value="04">Abril</option><option value="05">Maio</option><option value="06">Junho</option><option value="07">Julho</option><option value="08">Agosto</option><option value="09">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
+</select></div>
+<div><label for="descansoPrevisaoAno">Ano previsto</label><input id="descansoPrevisaoAno" type="number" min="1900" max="9998" step="1" placeholder="Ex.: 2026" required></div>
+</div>
 <div class="actions"><button id="descansoSalvarPrevisao" type="submit" class="primary">Salvar previsão</button></div>
 </form>
 <form id="descansoPeriodoForm" class="admin-form">

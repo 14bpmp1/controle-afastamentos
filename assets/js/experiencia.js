@@ -48,7 +48,7 @@ function reiniciarProtecaoFormularios() {
     ['afastamentoForm','Afastamento',['policial','tipo','inicio','dias','observacoes']],
     ['policialAdminForm','Cadastro de policial',['admMatricula','admPosto','admQra','admNome']],
     ['tipoAdminForm','Tipo de afastamento',['admSigla','admDescricao','admDiasFixos']],
-    ['descansoPrevisaoForm','Previsão de férias',['descansoPrevisao']],
+    ['descansoPrevisaoForm','Previsão de férias',['descansoPrevisaoMes','descansoPrevisaoAno']],
     ['descansoPeriodoForm','Período de férias/abono',['descansoTipo','descansoInicio','descansoDias']]
   ])protegerCampos(id,rotulo,campos.map($));
 }
